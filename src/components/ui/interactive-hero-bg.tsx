@@ -31,18 +31,53 @@ const LINKS: [number, number][] = [
 export default function InteractiveHeroBg({ className }: { className?: string }) {
   const [active, setActive] = useState<number | null>(null);
   const [pulses, setPulses] = useState<{ id: number; key: number }[]>([]);
+  const [positions, setPositions] = useState(() => NODES.map((n) => ({ x: n.x, y: n.y })));
+  const [dragging, setDragging] = useState<number | null>(null);
+  const svgRef = React.useRef<SVGSVGElement>(null);
 
   function nodeIsLit(id: number) {
-    if (active === id) return true;
-    if (active === null) return false;
-    return LINKS.some(([a, b]) => (a === active && b === id) || (b === active && a === id));
+    if (active === id || dragging === id) return true;
+    const hoverOrDrag = active ?? dragging;
+    if (hoverOrDrag === null) return false;
+    return LINKS.some(([a, b]) => (a === hoverOrDrag && b === id) || (b === hoverOrDrag && a === id));
   }
   function lineIsLit(a: number, b: number) {
-    return active !== null && (active === a || active === b);
+    const hoverOrDrag = active ?? dragging;
+    return hoverOrDrag !== null && (hoverOrDrag === a || hoverOrDrag === b);
+  }
+
+  function svgPointFromEvent(e: React.PointerEvent | PointerEvent) {
+    const svg = svgRef.current;
+    if (!svg) return { x: 0, y: 0 };
+    const pt = svg.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return { x: 0, y: 0 };
+    const transformed = pt.matrixTransform(ctm.inverse());
+    return { x: transformed.x, y: transformed.y };
+  }
+
+  function startDrag(id: number) {
+    setDragging(id);
+    setActive(id);
+    function onMove(e: PointerEvent) {
+      const p = svgPointFromEvent(e);
+      setPositions((cur) => cur.map((pos, i) => (i === id ? p : pos)));
+    }
+    function onUp() {
+      setDragging(null);
+      setActive(null);
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    }
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
   }
 
   return (
     <svg
+      ref={svgRef}
       className={className}
       viewBox="0 0 1600 1000"
       preserveAspectRatio="xMidYMid slice"
@@ -64,16 +99,16 @@ export default function InteractiveHeroBg({ className }: { className?: string })
 
       <g strokeWidth="1.2">
         {LINKS.map(([a, b], i) => {
-          const na = NODES[a];
-          const nb = NODES[b];
+          const pa = positions[a];
+          const pb = positions[b];
           const lit = lineIsLit(a, b);
           return (
             <motion.line
               key={i}
-              x1={na.x}
-              y1={na.y}
-              x2={nb.x}
-              y2={nb.y}
+              x1={pa.x}
+              y1={pa.y}
+              x2={pb.x}
+              y2={pb.y}
               stroke={lit ? "#2f6fed" : "#333333"}
               animate={{ opacity: lit ? 0.9 : 0.6 }}
               transition={{ duration: 0.25 }}
@@ -83,12 +118,12 @@ export default function InteractiveHeroBg({ className }: { className?: string })
       </g>
 
       {pulses.map((p) => {
-        const n = NODES[p.id];
+        const pos = positions[p.id];
         return (
           <motion.circle
             key={p.key}
-            cx={n.x}
-            cy={n.y}
+            cx={pos.x}
+            cy={pos.y}
             r={5}
             fill="none"
             stroke="#2f6fed"
@@ -103,22 +138,28 @@ export default function InteractiveHeroBg({ className }: { className?: string })
 
       <g>
         {NODES.map((n) => {
+          const pos = positions[n.id];
           const lit = nodeIsLit(n.id);
+          const isDragging = dragging === n.id;
           return (
             <motion.circle
               key={n.id}
-              cx={n.x}
-              cy={n.y}
+              cx={pos.x}
+              cy={pos.y}
               r={lit ? 8 : 5}
               fill={lit ? "#2f6fed" : "#555555"}
-              style={{ cursor: "pointer" }}
+              style={{ cursor: isDragging ? "grabbing" : "grab", touchAction: "none" }}
               animate={{
-                r: active === n.id ? 9 : lit ? 7 : 5,
+                r: isDragging ? 10 : active === n.id ? 9 : lit ? 7 : 5,
                 fill: lit ? "#2f6fed" : "#555555",
               }}
-              transition={{ duration: 0.25 }}
-              onMouseEnter={() => setActive(n.id)}
-              onMouseLeave={() => setActive((cur) => (cur === n.id ? null : cur))}
+              transition={{ duration: 0.2 }}
+              onMouseEnter={() => !dragging && setActive(n.id)}
+              onMouseLeave={() => !dragging && setActive((cur) => (cur === n.id ? null : cur))}
+              onPointerDown={(e) => {
+                e.preventDefault();
+                startDrag(n.id);
+              }}
               onClick={() => setPulses((cur) => [...cur, { id: n.id, key: Date.now() + Math.random() }])}
             />
           );
