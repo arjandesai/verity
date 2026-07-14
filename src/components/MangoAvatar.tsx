@@ -109,17 +109,18 @@ function renderHat(hat?: string | null) {
   }
 }
 
-/** Verity's mascot: a small, soft kawaii blob/fruit creature - a rounded oval body (wider at
- *  the bottom), coral-to-orange-to-yellow gradient, tiny curved arms, thin stick legs with flat
- *  feet, and a friendly open smile with a couple of tiny teeth and a little tongue. Eyes track
- *  the mouse wherever it moves on the page, and clicking makes him react like he's just been
- *  poked. */
+/** Verity's mascot: a small, soft blob creature that gently bobs up and down and blinks every
+ *  few seconds, on top of the original poke/mouse-tracking behavior. Body proportions and the
+ *  pink-to-yellow-green gradient are ported directly from an original procedural drawing
+ *  (each shape's position/size converted from its source 512x512 canvas into this SVG's
+ *  coordinate space) rather than traced from any illustration. */
 export function MangoAvatar({ size = 56, mouthOpen = true, className, onClick, hat, outfit, colors, gradientId = "mangoBody" }: MangoAvatarProps) {
-  const [c1, c2, c3] = colors || ["#f2665c", "#f5924a", "#f7c94a"];
+  const [c1, c2, c3] = colors || ["#ff7882", "#ebaa5a", "#d7dc32"];
   const rootRef = useRef<SVGSVGElement>(null);
   const rafRef = useRef<number | null>(null);
   const [pupil, setPupil] = useState({ x: 0, y: 0 });
   const [poked, setPoked] = useState(false);
+  const [blinking, setBlinking] = useState(false);
   const controls = useAnimation();
 
   useEffect(() => {
@@ -147,6 +148,21 @@ export function MangoAvatar({ size = 56, mouthOpen = true, className, onClick, h
     };
   }, []);
 
+  // Blinks for ~150ms every 3-4 seconds, at a random-ish interval so multiple copies on the
+  // same page don't all blink in perfect unison.
+  useEffect(() => {
+    let timeout: number;
+    function scheduleBlink() {
+      timeout = window.setTimeout(() => {
+        setBlinking(true);
+        setTimeout(() => setBlinking(false), 150);
+        scheduleBlink();
+      }, 3000 + Math.random() * 1500);
+    }
+    scheduleBlink();
+    return () => clearTimeout(timeout);
+  }, []);
+
   function handleClick() {
     setPoked(true);
     controls.start({
@@ -162,9 +178,9 @@ export function MangoAvatar({ size = 56, mouthOpen = true, className, onClick, h
   return (
     <motion.svg
       ref={rootRef}
-      viewBox="0 -14 100 124"
+      viewBox="0 -8 100 108"
       width={size}
-      height={size * 1.24}
+      height={size * 1.08}
       className={className}
       onClick={handleClick}
       animate={controls}
@@ -178,68 +194,63 @@ export function MangoAvatar({ size = 56, mouthOpen = true, className, onClick, h
         </linearGradient>
       </defs>
 
-      {/* ground shadow */}
-      <ellipse cx="50" cy="117" rx="24" ry="4" fill="#000" opacity={0.1} />
+      {/* ground shadow - stays put while the body floats above it */}
+      <ellipse cx="49.8" cy="83" rx="20.5" ry="2.9" fill="#000" opacity={0.12} />
 
-      {/* legs - thin sticks with small flat feet, close together */}
-      <rect x="42" y="98" width="5" height="17" rx="1" fill="#f0a441" />
-      <rect x="53" y="98" width="5" height="17" rx="1" fill="#f0a441" />
-      <rect x="40" y="112" width="9" height="4" rx="2" fill="#e8912f" />
-      <rect x="51" y="112" width="9" height="4" rx="2" fill="#e8912f" />
+      {/* everything below gently bobs up and down, like it's floating */}
+      <motion.g
+        animate={{ y: [0, -3.5, 0, 3.5, 0] }}
+        transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+      >
+        {/* legs - thin sticks with small flat feet */}
+        <rect x="41" y="68.3" width="2" height="11.7" fill="#ffaa28" />
+        <rect x="57.6" y="68.3" width="2" height="11.7" fill="#ffaa28" />
+        <ellipse cx="41.5" cy="80" rx="3.4" ry="2" fill="#ffaa28" />
+        <ellipse cx="60" cy="80" rx="3.4" ry="2" fill="#ffaa28" />
 
-      {/* arms - small rounded nubs at the sides, same warm color as the body top */}
-      <ellipse cx="15" cy="68" rx="7" ry="11" fill={c1} transform="rotate(18 15 68)" />
-      <ellipse cx="85" cy="68" rx="7" ry="11" fill={c1} transform="rotate(-18 85 68)" />
+        {/* arms */}
+        <ellipse cx="24.4" cy="56.6" rx="4.9" ry="7.8" fill="#ff7882" />
+        <ellipse cx="75.6" cy="56.6" rx="4.9" ry="7.8" fill="#ff7882" />
 
-      {renderOutfitBack(outfit)}
+        {renderOutfitBack(outfit)}
 
-      {/* body - a smooth rounded oval blob, a little wider at the bottom, no sharp edges */}
-      <path
-        d="M50 12
-           C 72 12 84 32 84 56
-           C 84 84 70 100 50 100
-           C 30 100 16 84 16 56
-           C 16 32 28 12 50 12 Z"
-        fill={`url(#${gradientId})`}
-      />
+        {/* body */}
+        <ellipse cx="49.8" cy="50" rx="26.4" ry="20.5" fill={`url(#${gradientId})`} />
 
-      {/* a tiny leaf/stem sprout on top, like a real mango */}
-      <path d="M46 13 C 44 5 48 -1 53 -3 C 51 3 51 9 48 14 Z" fill="#7fae54" />
-      <path d="M52 12 C 53 4 59 0 65 0 C 61 5 58 10 54 13 Z" fill="#8fc262" />
+        {/* small antenna on top */}
+        <ellipse cx="49.8" cy="28.3" rx="2.9" ry="3.9" fill="#ff6478" />
 
-      {/* freckle-like speckles on the lower body, echoing real mango skin texture */}
-      <g fill="#000" opacity={0.08}>
-        <ellipse cx="32" cy="72" rx="2.4" ry="4" transform="rotate(20 32 72)" />
-        <ellipse cx="28" cy="84" rx="2" ry="3.4" transform="rotate(10 28 84)" />
-        <ellipse cx="36" cy="90" rx="1.8" ry="3" transform="rotate(-8 36 90)" />
-        <ellipse cx="30" cy="60" rx="1.6" ry="2.6" transform="rotate(24 30 60)" />
-      </g>
+        {/* eyes - open, with a shine; pupils follow the cursor - or a closed blink arc */}
+        {blinking ? (
+          <>
+            <path d="M32.3 45.9 Q39.1 51 45.9 45.9" stroke="#241f26" strokeWidth="1.4" fill="none" strokeLinecap="round" />
+            <path d="M53.7 45.9 Q60.5 51 67.3 45.9" stroke="#241f26" strokeWidth="1.4" fill="none" strokeLinecap="round" />
+          </>
+        ) : (
+          <>
+            <circle cx="39.1" cy="45.9" r="6.8" fill="#fff" />
+            <circle cx="60.5" cy="45.9" r="6.8" fill="#fff" />
+            <motion.circle animate={{ cx: 39.1 + pupil.x, cy: 46.9 + pupil.y }} r="3.9" fill="#281e3c" />
+            <motion.circle animate={{ cx: 60.5 + pupil.x, cy: 46.9 + pupil.y }} r="3.9" fill="#281e3c" />
+            <motion.circle animate={{ cx: 37.7 + pupil.x * 0.5, cy: 44.9 + pupil.y * 0.5 }} r="1.4" fill="#fff" />
+            <motion.circle animate={{ cx: 59.1 + pupil.x * 0.5, cy: 44.9 + pupil.y * 0.5 }} r="1.4" fill="#fff" />
+          </>
+        )}
 
-      {/* blush cheeks */}
-      <ellipse cx="27" cy="60" rx="4.5" ry="2.6" fill="#ff8fae" opacity={0.4} />
-      <ellipse cx="73" cy="60" rx="4.5" ry="2.6" fill="#ff8fae" opacity={0.4} />
+        {/* mouth - a rounded dark opening with a couple of teeth and a little tongue */}
+        {mouthOpen ? (
+          <>
+            <rect x="44.9" y="52.7" width="9.8" height="9.8" rx="2.9" fill="#3c1e46" />
+            <rect x="47.9" y="52.7" width="2.9" height="2.9" fill="#fff" />
+            <ellipse cx="49.8" cy="60" rx="2" ry="1.5" fill="#ff8282" />
+          </>
+        ) : (
+          <path d="M42 60 Q49.8 66 57.6 60" stroke="#3c1e46" strokeWidth="2.6" fill="none" strokeLinecap="round" />
+        )}
 
-      {/* eyes - large, round, kawaii-style with a shiny highlight; pupils follow the cursor */}
-      <circle cx="35" cy="50" r="11" fill="#fff" />
-      <circle cx="65" cy="50" r="11" fill="#fff" />
-      <motion.circle animate={{ cx: 35 + pupil.x, cy: 51 + pupil.y }} r="6.5" fill="#241f26" />
-      <motion.circle animate={{ cx: 65 + pupil.x, cy: 51 + pupil.y }} r="6.5" fill="#241f26" />
-      <motion.circle animate={{ cx: 32.6 + pupil.x * 0.5, cy: 48 + pupil.y * 0.5 }} r="2.3" fill="#fff" />
-      <motion.circle animate={{ cx: 62.6 + pupil.x * 0.5, cy: 48 + pupil.y * 0.5 }} r="2.3" fill="#fff" />
-
-      {/* mouth - small open smile with a dark interior, tiny teeth up top, and a tongue peeking out */}
-      {mouthOpen ? (
-        <>
-          <path d="M43 65 Q50 78 57 65 Q50 71 43 65 Z" fill="#241f26" />
-          <path d="M45.5 66.5 L48 65 L48 68 Z M54.5 66.5 L52 65 L52 68 Z" fill="#fff" />
-          <path d="M47 72 Q50 78 53 72 Q50 74.5 47 72 Z" fill="#ef8f7a" />
-        </>
-      ) : (
-        <path d="M42 70 Q50 77 58 70" stroke="#241f26" strokeWidth="3" fill="none" strokeLinecap="round" />
-      )}
-
-      {renderOutfitFront(outfit)}
-      {renderHat(hat)}
+        {renderOutfitFront(outfit)}
+        {renderHat(hat)}
+      </motion.g>
     </motion.svg>
   );
 }
