@@ -189,7 +189,7 @@ export default function Pet() {
             </motion.button>
           </div>
 
-          <div style={{ fontSize: 13, color: "var(--text-soft)", marginTop: 14 }}>Tap Mango to pet him - earns affection &amp; coins</div>
+          <div style={{ fontSize: 13, color: "var(--text-soft)", marginTop: 14 }}>Tap Mango to pet him - builds affection</div>
         </div>
       </div>
 
