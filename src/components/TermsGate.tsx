@@ -1,14 +1,15 @@
 import * as React from "react";
 import { useEffect, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { hasAcceptedTerms, acceptTerms } from "@/lib/verity";
+import { hasAcceptedTerms, acceptTerms, getUser } from "@/lib/verity";
 import { LogoMark } from "@/components/LogoMark";
 
 /** Blocks the whole app behind a Terms of Use / Privacy Policy acceptance screen on first visit  - 
     except the Legal page itself, which stays readable so people can review it before deciding. */
 export function TermsGate({ children }: { children: React.ReactNode }) {
   const location = useLocation();
+  const navigate = useNavigate();
   const [accepted, setAccepted] = useState(true);
   const [checked, setChecked] = useState(false);
   const [ready, setReady] = useState(false);
@@ -64,6 +65,11 @@ export function TermsGate({ children }: { children: React.ReactNode }) {
             onClick={() => {
               acceptTerms();
               setAccepted(true);
+              // Send first-time visitors straight into account creation instead of
+              // dropping them on the home page with nothing to do yet.
+              if (!getUser()) {
+                navigate("/signup");
+              }
             }}
           >
             Accept &amp; continue
