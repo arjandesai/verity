@@ -178,15 +178,18 @@ export function MangoAvatar({ size = 56, mouthOpen = true, className, onClick, h
         </linearGradient>
       </defs>
 
-      {/* legs - thin yellow-orange sticks with small flat feet */}
-      <rect x="38" y="98" width="5" height="16" rx="2.5" fill="#f0a441" />
-      <rect x="57" y="98" width="5" height="16" rx="2.5" fill="#f0a441" />
-      <ellipse cx="40.5" cy="115" rx="6" ry="2.6" fill="#e8912f" />
-      <ellipse cx="59.5" cy="115" rx="6" ry="2.6" fill="#e8912f" />
+      {/* ground shadow */}
+      <ellipse cx="50" cy="117" rx="24" ry="4" fill="#000" opacity={0.1} />
 
-      {/* arms - tiny curved rounded shapes, same coral/orange as the body */}
-      <path d="M18 62 C 6 60 2 68 6 76 C 10 72 16 70 22 70 Z" fill={c1} />
-      <path d="M82 62 C 94 60 98 68 94 76 C 90 72 84 70 78 70 Z" fill={c1} />
+      {/* legs - thin sticks with small flat feet, close together */}
+      <rect x="42" y="98" width="5" height="17" rx="1" fill="#f0a441" />
+      <rect x="53" y="98" width="5" height="17" rx="1" fill="#f0a441" />
+      <rect x="40" y="112" width="9" height="4" rx="2" fill="#e8912f" />
+      <rect x="51" y="112" width="9" height="4" rx="2" fill="#e8912f" />
+
+      {/* arms - small rounded nubs at the sides, same warm color as the body top */}
+      <ellipse cx="15" cy="68" rx="7" ry="11" fill={c1} transform="rotate(18 15 68)" />
+      <ellipse cx="85" cy="68" rx="7" ry="11" fill={c1} transform="rotate(-18 85 68)" />
 
       {renderOutfitBack(outfit)}
 
@@ -200,20 +203,36 @@ export function MangoAvatar({ size = 56, mouthOpen = true, className, onClick, h
         fill={`url(#${gradientId})`}
       />
 
+      {/* a tiny leaf/stem sprout on top, like a real mango */}
+      <path d="M46 13 C 44 5 48 -1 53 -3 C 51 3 51 9 48 14 Z" fill="#7fae54" />
+      <path d="M52 12 C 53 4 59 0 65 0 C 61 5 58 10 54 13 Z" fill="#8fc262" />
+
+      {/* freckle-like speckles on the lower body, echoing real mango skin texture */}
+      <g fill="#000" opacity={0.08}>
+        <ellipse cx="32" cy="72" rx="2.4" ry="4" transform="rotate(20 32 72)" />
+        <ellipse cx="28" cy="84" rx="2" ry="3.4" transform="rotate(10 28 84)" />
+        <ellipse cx="36" cy="90" rx="1.8" ry="3" transform="rotate(-8 36 90)" />
+        <ellipse cx="30" cy="60" rx="1.6" ry="2.6" transform="rotate(24 30 60)" />
+      </g>
+
+      {/* blush cheeks */}
+      <ellipse cx="27" cy="60" rx="4.5" ry="2.6" fill="#ff8fae" opacity={0.4} />
+      <ellipse cx="73" cy="60" rx="4.5" ry="2.6" fill="#ff8fae" opacity={0.4} />
+
       {/* eyes - large, round, kawaii-style with a shiny highlight; pupils follow the cursor */}
       <circle cx="35" cy="50" r="11" fill="#fff" />
       <circle cx="65" cy="50" r="11" fill="#fff" />
-      <motion.circle animate={{ cx: 35 + pupil.x, cy: 51 + pupil.y }} r="6" fill="#241f26" />
-      <motion.circle animate={{ cx: 65 + pupil.x, cy: 51 + pupil.y }} r="6" fill="#241f26" />
-      <motion.circle animate={{ cx: 32.4 + pupil.x * 0.5, cy: 47.8 + pupil.y * 0.5 }} r="2.1" fill="#fff" />
-      <motion.circle animate={{ cx: 62.4 + pupil.x * 0.5, cy: 47.8 + pupil.y * 0.5 }} r="2.1" fill="#fff" />
+      <motion.circle animate={{ cx: 35 + pupil.x, cy: 51 + pupil.y }} r="6.5" fill="#241f26" />
+      <motion.circle animate={{ cx: 65 + pupil.x, cy: 51 + pupil.y }} r="6.5" fill="#241f26" />
+      <motion.circle animate={{ cx: 32.6 + pupil.x * 0.5, cy: 48 + pupil.y * 0.5 }} r="2.3" fill="#fff" />
+      <motion.circle animate={{ cx: 62.6 + pupil.x * 0.5, cy: 48 + pupil.y * 0.5 }} r="2.3" fill="#fff" />
 
-      {/* mouth - small open smile with a dark interior, tiny teeth up top, and a little tongue */}
+      {/* mouth - small open smile with a dark interior, tiny teeth up top, and a tongue peeking out */}
       {mouthOpen ? (
         <>
-          <ellipse cx="50" cy="72" rx="7.5" ry="6" fill="#241f26" />
-          <path d="M44 67.5 L47 71 L50 67.5 L53 71 L56 67.5" stroke="#fff" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-          <ellipse cx="50" cy="75.5" rx="3.2" ry="2" fill="#f5c542" />
+          <path d="M43 65 Q50 78 57 65 Q50 71 43 65 Z" fill="#241f26" />
+          <path d="M45.5 66.5 L48 65 L48 68 Z M54.5 66.5 L52 65 L52 68 Z" fill="#fff" />
+          <path d="M47 72 Q50 78 53 72 Q50 74.5 47 72 Z" fill="#ef8f7a" />
         </>
       ) : (
         <path d="M42 70 Q50 77 58 70" stroke="#241f26" strokeWidth="3" fill="none" strokeLinecap="round" />
