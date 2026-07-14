@@ -161,7 +161,7 @@ export function Buddy() {
 
   function petMango() {
     // Petting builds affection only - coins come from achievements/leveling up, not repeatable petting.
-    bumpAffection(3);
+    bumpAffection(1);
     setPetPulse(true);
     showToast(PET_LINES[Math.floor(Math.random() * PET_LINES.length)]);
     setTimeout(() => setPetPulse(false), 500);

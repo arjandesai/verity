@@ -65,7 +65,7 @@ export default function Pet() {
   function petMango() {
     // Petting builds his affection, but no longer hands out coins - coins only come from
     // achievements and leveling up, so the shop stays meaningful instead of trivially maxed out.
-    setAffection(addMangoAffection(3));
+    setAffection(addMangoAffection(1));
     setPulse(true);
     showToast(PET_LINES[Math.floor(Math.random() * PET_LINES.length)]);
     setTimeout(() => setPulse(false), 500);

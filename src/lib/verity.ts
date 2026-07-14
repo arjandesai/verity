@@ -900,7 +900,9 @@ export function setGameXP(v: number) {
   safeSet(LS_GAME_XP, String(Math.max(0, Math.round(v))));
 }
 export function xpNeededForLevel(level: number): number {
-  return 100 + (level - 1) * 50;
+  // Steeper curve than before, so leveling up (and the Mango coin bonus that comes with it)
+  // takes meaningfully more play, especially at higher levels.
+  return 160 + (level - 1) * 85;
 }
 export function levelFromXP(xp: number): { level: number; into: number; need: number } {
   let level = 1;
@@ -950,10 +952,12 @@ export interface MangoStage {
   next: number | null; // affection needed for the next stage, or null if maxed out
 }
 export function mangoStageFor(affection: number): MangoStage {
-  if (affection < 20) return { name: "New Friend", emoji: "🥚", next: 20 };
-  if (affection < 60) return { name: "Good Friend", emoji: "🌱", next: 60 };
-  if (affection < 150) return { name: "Close Friend", emoji: "🌼", next: 150 };
-  if (affection < 300) return { name: "Best Friend", emoji: "⭐", next: 300 };
+  // Each stage now needs noticeably more affection than before, so getting Mango to its
+  // highest bond level takes sustained interaction rather than a handful of pets.
+  if (affection < 40) return { name: "New Friend", emoji: "🥚", next: 40 };
+  if (affection < 130) return { name: "Good Friend", emoji: "🌱", next: 130 };
+  if (affection < 320) return { name: "Close Friend", emoji: "🌼", next: 320 };
+  if (affection < 650) return { name: "Best Friend", emoji: "⭐", next: 650 };
   return { name: "Inseparable", emoji: "💛", next: null };
 }
 

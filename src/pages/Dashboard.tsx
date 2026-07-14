@@ -248,7 +248,7 @@ export default function Dashboard() {
         // Coins earned per achievement, scaled by rarity - the platinum trophy already awards
         // its own big bonus separately when the secret sequence completes.
         if (a.tier !== "platinum") {
-          addMangoCoins({ bronze: 10, silver: 20, gold: 40, platinum: 0 }[a.tier]);
+          addMangoCoins({ bronze: 5, silver: 10, gold: 20, platinum: 0 }[a.tier]);
         }
       });
       markAchievementsSeen(newlyUnlocked.map((a) => a.title));

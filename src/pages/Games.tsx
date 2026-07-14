@@ -59,7 +59,7 @@ export default function Games() {
       showAward({ type: "personal-best", title: "New personal best!", subtitle: gameTitle });
     }
     if (nextLevel > prevLevel) {
-      const coinsEarned = (nextLevel - prevLevel) * 25;
+      const coinsEarned = (nextLevel - prevLevel) * 12;
       addMangoCoins(coinsEarned);
       setTimeout(() => {
         showAward({ type: "level-up", title: `Level ${nextLevel} reached!`, subtitle: `+${coinsEarned} Mango coins` });
