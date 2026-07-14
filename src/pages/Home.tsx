@@ -13,6 +13,7 @@ import { AnimatedCarousel } from "@/components/ui/logo-carousel";
 import ClippedVideoTab from "@/components/ui/clipped-video-tab";
 import Testimonials from "@/components/ui/testimonial-v2";
 import { BouncyCardsFeatures } from "@/components/ui/bounce-card-features";
+import InteractiveHeroBg from "@/components/ui/interactive-hero-bg";
 
 const TECH_LOGOS = [
   { src: "https://cdn.simpleicons.org/react/61DAFB", alt: "React" },
@@ -53,11 +54,7 @@ export default function Home() {
           background: "#0a0a0a",
         }}
       >
-        <img
-          src={`${import.meta.env.BASE_URL}hero-bg.svg`}
-          alt=""
-          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
-        />
+        <InteractiveHeroBg />
         <div
           style={{
             position: "absolute",
