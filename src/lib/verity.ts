@@ -653,7 +653,7 @@ export interface GeminiAnalysis {
 }
 export type GeminiResult = { ok: true; analysis: GeminiAnalysis } | { ok: false; reason: string };
 
-function fileToBase64(file: File): Promise<string> {
+function fileToBase64(file: File | Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
@@ -818,6 +818,203 @@ export async function analyzeHandwritingPhoto(file: File, apiKey: string, expect
 export function probabilityFromGeminiAnalysis(a: GeminiAnalysis): number {
   const avg = (a.legibility + a.strokeSteadiness + a.spacingConsistency + a.letterSizeConsistency) / 4;
   return clamp01(1 - avg / 100);
+}
+
+/* ---------- Gemini speech analysis (real audio transcription + strict clinical-style scoring) ---------- */
+export const SPEECH_LANGUAGES = [
+  { code: "en", label: "English" },
+  { code: "es", label: "Spanish" },
+  { code: "fr", label: "French" },
+  { code: "de", label: "German" },
+  { code: "hi", label: "Hindi" },
+  { code: "zh", label: "Mandarin Chinese" },
+  { code: "ar", label: "Arabic" },
+  { code: "pt", label: "Portuguese" },
+] as const;
+export type SpeechLanguageCode = (typeof SPEECH_LANGUAGES)[number]["code"];
+
+export interface GeminiSpeechAnalysis {
+  fluency: number; // 0-100, 100 = smooth and typical
+  pauseSeverity: number; // 0-100, 100 = frequent/long abnormal pauses
+  wordFindingDifficulty: number; // 0-100, 100 = heavy hesitation/searching for words
+  coherence: number; // 0-100, 100 = clear and on-topic
+  confidence: number | null;
+  notes: string;
+  transcription?: string;
+  matchesExpectedText?: boolean | null;
+}
+export type GeminiSpeechResult = { ok: true; analysis: GeminiSpeechAnalysis } | { ok: false; reason: string };
+
+function languageLabel(code: SpeechLanguageCode): string {
+  return SPEECH_LANGUAGES.find((l) => l.code === code)?.label || "English";
+}
+
+function buildGeminiSpeechPrompt(expectedText: string | undefined, language: SpeechLanguageCode): string {
+  const langName = languageLabel(language);
+  const target = expectedText
+    ? `The person was asked to read this exact sentence aloud, in ${langName}: "${expectedText}". Transcribe what ` +
+      'they actually said, word for word, into "transcription". Then compare it against the target sentence: minor ' +
+      "mispronunciations, filler words (um, uh), false starts, or self-corrections are still a genuine attempt and " +
+      'should count as a match - but if they read a substantially different, incomplete, or unrelated sentence, set ' +
+      '"matchesExpectedText" to false. Otherwise set it to true. '
+    : "";
+  return (
+    "You are a strict, clinically-minded speech-language evaluator listening to a short audio clip, as part of a " +
+    "non-clinical screening demo (not a diagnosis) that looks for speech patterns sometimes associated with cognitive " +
+    `decline. The expected spoken language is ${langName}. ` +
+    target +
+    "First, confirm the clip actually contains audible human speech - not silence, not pure background noise/music, " +
+    'and not an unrelated sound. If it does NOT contain real speech, set "containsSpeech" to false, set every numeric ' +
+    'field to 0, and explain what you actually heard in "notes". Do not invent scores for a clip with no real speech ' +
+    'in it. If it DOES contain real speech, set "containsSpeech" to true and be genuinely strict and harsh, not ' +
+    "lenient, when rating these qualities on a 0-100 scale based only on what is audible in the clip: " +
+    "fluency (100 = smooth, natural delivery with no hesitation; sharply lower for any halting, broken-up, or " +
+    "labored delivery), pauseSeverity (0 = no abnormal pauses; 100 = frequent long pauses or dead air between words " +
+    "or phrases - score this HIGH whenever pauses clearly exceed what a normal fluent reader would produce, even if " +
+    "only some of the recording is affected), wordFindingDifficulty (0 = no hesitation finding words; 100 = " +
+    "noticeable searching, false starts, filler sounds, or self-correction while trying to produce words), and " +
+    "coherence (100 = clear, on-topic, and easy to follow; lower for rambling, repetition, or disorganized speech). " +
+    "Do not soften these scores out of politeness - if the pauses are long and frequent, pauseSeverity should be " +
+    'high, even if the person eventually gets every word out correctly. Also include a 0-100 "confidence" reflecting ' +
+    "how confident you are in this reading given audio quality and clarity. " +
+    "Respond with ONLY raw JSON, no markdown fences, no extra commentary, in exactly this shape: " +
+    '{"containsSpeech":true|false,"matchesExpectedText":true|false,"transcription":"your best-effort transcription ' +
+    'of what was said, or an empty string if none","confidence":0-100,"fluency":0-100,"pauseSeverity":0-100,' +
+    '"wordFindingDifficulty":0-100,"coherence":0-100,"notes":"one short plain-language sentence describing what you heard"}'
+  );
+}
+
+export async function analyzeSpeechAudio(
+  file: File | Blob,
+  apiKey: string,
+  expectedText: string | undefined,
+  language: SpeechLanguageCode
+): Promise<GeminiSpeechResult> {
+  if (!apiKey) return { ok: false, reason: "Please enter your Gemini API key first." };
+  if (!file) return { ok: false, reason: "Please provide an audio recording to analyze." };
+
+  let base64: string;
+  try {
+    base64 = await fileToBase64(file);
+  } catch {
+    return { ok: false, reason: "Couldn't read that audio file." };
+  }
+
+  const mimeType = file.type || "audio/webm";
+  const body = {
+    contents: [{ parts: [{ text: buildGeminiSpeechPrompt(expectedText, language) }, { inline_data: { mime_type: mimeType, data: base64 } }] }],
+    generationConfig: { temperature: 0.15, response_mime_type: "application/json" },
+  };
+
+  let res: Response | null = null;
+  let lastStatus = 0;
+  let sawRateLimit = false;
+
+  for (const model of GEMINI_MODEL_CANDIDATES) {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      } catch {
+        return { ok: false, reason: "Could not reach Gemini - check your internet connection and try again." };
+      }
+      if (res.ok || res.status !== 429 || attempt === 1) break;
+      sawRateLimit = true;
+      await new Promise((r) => setTimeout(r, 1500));
+    }
+    if (res.ok) break;
+    lastStatus = res.status;
+    if (res.status === 429) sawRateLimit = true;
+    if (res.status !== 404 && res.status !== 429 && res.status !== 403) break;
+    res = null;
+  }
+
+  if (!res) {
+    if (sawRateLimit) {
+      return { ok: false, reason: "Gemini's free-tier limit was hit on every available model. Wait about a minute and try again." };
+    }
+    return { ok: false, reason: `None of Gemini's current models responded (last status ${lastStatus}). Your key may not have access yet.` };
+  }
+  if (!res.ok) {
+    if (res.status === 400) return { ok: false, reason: "Gemini rejected that request. Double-check your API key, or that audio format is supported." };
+    if (res.status === 429) return { ok: false, reason: "Gemini's rate limit was hit - wait a moment and try again." };
+    return { ok: false, reason: `Gemini returned an error (status ${res.status}).` };
+  }
+
+  let data: any;
+  try {
+    data = await res.json();
+  } catch {
+    return { ok: false, reason: "Got an unreadable response from Gemini." };
+  }
+
+  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) return { ok: false, reason: "Gemini didn't return an analysis for that recording - try again." };
+
+  const cleaned = text.trim().replace(/^```json/i, "").replace(/^```/, "").replace(/```$/, "").trim();
+  let parsed: any;
+  try {
+    parsed = JSON.parse(cleaned);
+  } catch {
+    const start = cleaned.indexOf("{");
+    const end = cleaned.lastIndexOf("}");
+    if (start !== -1 && end !== -1 && end > start) {
+      try {
+        parsed = JSON.parse(cleaned.slice(start, end + 1));
+      } catch {
+        /* still no good */
+      }
+    }
+    if (!parsed) return { ok: false, reason: "Couldn't parse Gemini's response - try again." };
+  }
+
+  if (parsed.containsSpeech === false) {
+    return { ok: false, reason: `That doesn't sound like a real speech recording${parsed.notes ? " - " + parsed.notes : ""}. Try recording again.` };
+  }
+
+  const fields = ["fluency", "pauseSeverity", "wordFindingDifficulty", "coherence"] as const;
+  for (const f of fields) {
+    const v = parsed[f];
+    if (typeof v !== "number" || isNaN(v)) return { ok: false, reason: "Gemini's response was missing expected fields - try again." };
+    parsed[f] = Math.max(0, Math.min(100, v));
+  }
+  parsed.notes = typeof parsed.notes === "string" ? parsed.notes : "";
+  parsed.transcription = typeof parsed.transcription === "string" ? parsed.transcription : "";
+  parsed.confidence = typeof parsed.confidence === "number" && !isNaN(parsed.confidence) ? Math.max(0, Math.min(100, parsed.confidence)) : null;
+
+  if (parsed.confidence !== null && parsed.confidence < 35) {
+    return { ok: false, reason: "Gemini wasn't confident enough in this recording (audio quality/clarity). Try recording somewhere quieter." };
+  }
+
+  if (expectedText) {
+    const modelSaysMismatch = parsed.matchesExpectedText === false;
+    let localMismatch = false;
+    if (parsed.transcription) {
+      const targetWords = new Set(normalizeForCompare(expectedText).split(" ").filter((w) => w.length > 2));
+      const gotWords = normalizeForCompare(parsed.transcription).split(" ").filter((w) => w.length > 2);
+      const overlap = gotWords.filter((w) => targetWords.has(w)).length;
+      const neededOverlap = Math.max(1, Math.ceil(targetWords.size * 0.35));
+      localMismatch = targetWords.size > 0 && overlap < neededOverlap;
+    }
+    if (modelSaysMismatch || localMismatch) {
+      const readBack = parsed.transcription ? ` We heard: "${parsed.transcription}".` : "";
+      return {
+        ok: false,
+        reason: `That doesn't match the sentence you were asked to read ("${expectedText}").${readBack} Please read that exact sentence and try again.`,
+      };
+    }
+  }
+
+  return { ok: true, analysis: parsed as GeminiSpeechAnalysis };
+}
+
+/** Deliberately harsh: pauseSeverity and wordFindingDifficulty are weighted more heavily than
+ *  overall fluency/coherence, since long pauses between words are the single strongest signal
+ *  this screening is meant to catch, and the goal here is a strict reading, not a lenient one. */
+export function probabilityFromGeminiSpeechAnalysis(a: GeminiSpeechAnalysis): number {
+  const weighted =
+    (100 - a.fluency) * 0.22 + a.pauseSeverity * 0.4 + a.wordFindingDifficulty * 0.26 + (100 - a.coherence) * 0.12;
+  return clamp01(weighted / 100);
 }
 
 /* ---------- daily activity dots: speech / handwriting / games, whichever order you do them ---------- */
