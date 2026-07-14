@@ -1,0 +1,367 @@
+import * as React from "react";
+import { useRef, useState } from "react";
+import { PenLine } from "lucide-react";
+import { RevealOnScroll } from "@/components/RevealOnScroll";
+import { ScoreBlock, BreakdownGrid } from "@/components/ScoreBlock";
+import { DifficultySelector, type Difficulty } from "@/components/LevelBar";
+import { ButtonHoldAndRelease } from "@/components/ui/hold-and-release-button";
+import { FileUploadZone } from "@/components/ui/file-upload-zone";
+import { markDailyActivity } from "@/lib/verity";
+import {
+  computeHandwritingMetrics,
+  probabilityFromHandwriting,
+  bandFor,
+  addHistoryEntry,
+  analyzeHandwritingPhoto,
+  probabilityFromGeminiAnalysis,
+  getGeminiKey,
+  setGeminiKey,
+  canvasToFile,
+  assessDrawingSanity,
+  type HandwritingMetrics,
+  type Band,
+  type GeminiAnalysis,
+  type HandwritingPoint,
+} from "@/lib/verity";
+
+// Easy always uses the same sentence; the other tiers pick a random prompt each attempt.
+const PROMPTS: Record<Difficulty, string[]> = {
+  Easy: ["The early bird catches the worm."],
+  Medium: [
+    "A gentle breeze drifted through the quiet orchard this afternoon.",
+    "The library closes early on Sundays during the winter months.",
+    "Fresh bread from the corner bakery always smells wonderful.",
+  ],
+  Hard: [
+    "Remembering small details often becomes more challenging as responsibilities accumulate.",
+    "The committee postponed its decision until further evidence could be gathered.",
+    "Balancing work and rest requires more discipline than most people expect.",
+  ],
+  Extreme: [
+    "The unpredictable nature of municipal bureaucracy occasionally frustrates even the most patient constituents.",
+    "Distinguishing correlation from causation remains one of the most persistent challenges in observational research.",
+    "The manuscript's ambiguous provenance complicated the archivists' efforts to authenticate its historical significance.",
+  ],
+};
+
+function pickPrompt(d: Difficulty): string {
+  const options = PROMPTS[d];
+  return options[Math.floor(Math.random() * options.length)];
+}
+
+export default function Handwriting() {
+  const [mode, setMode] = useState<"draw" | "photo">("draw");
+  const [difficulty, setDifficultyState] = useState<Difficulty>("Easy");
+  const [prompt, setPrompt] = useState(() => pickPrompt("Easy"));
+
+  function setDifficulty(d: Difficulty) {
+    setDifficultyState(d);
+    setPrompt(pickPrompt(d));
+  }
+
+  // draw mode state
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const drawing = useRef(false);
+  const points = useRef<HandwritingPoint[]>([]);
+  const strokes = useRef<HandwritingPoint[][]>([]);
+  const currentStroke = useRef<HandwritingPoint[]>([]);
+  const strokeCount = useRef(0);
+  const pauseCount = useRef(0);
+  const lastPoint = useRef<HandwritingPoint | null>(null);
+  const [hasDrawn, setHasDrawn] = useState(false);
+
+  const [metrics, setMetrics] = useState<HandwritingMetrics | null>(null);
+  const [probability, setProbability] = useState(0);
+  const [band, setBand] = useState<Band>("typical");
+  const [error, setError] = useState("");
+  const [done, setDone] = useState(false);
+
+  // photo mode state
+  const [apiKey, setApiKeyState] = useState(getGeminiKey());
+  const [file, setFile] = useState<File | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [geminiAnalysis, setGeminiAnalysis] = useState<GeminiAnalysis | null>(null);
+
+  function getPos(e: React.PointerEvent<HTMLCanvasElement>) {
+    const rect = canvasRef.current!.getBoundingClientRect();
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top, t: Date.now() };
+  }
+
+  function handlePointerDown(e: React.PointerEvent<HTMLCanvasElement>) {
+    drawing.current = true;
+    lastPoint.current = null; // reset so between-stroke gaps aren't counted as hesitations
+    strokeCount.current += 1;
+    currentStroke.current = [];
+    const p = getPos(e);
+    points.current.push(p);
+    currentStroke.current.push(p);
+    lastPoint.current = p;
+    const ctx = canvasRef.current!.getContext("2d")!;
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+    setHasDrawn(true);
+  }
+  function handlePointerMove(e: React.PointerEvent<HTMLCanvasElement>) {
+    if (!drawing.current) return;
+    const p = getPos(e);
+    if (lastPoint.current && p.t - lastPoint.current.t > 400) {
+      pauseCount.current += 1;
+    }
+    const ctx = canvasRef.current!.getContext("2d")!;
+    ctx.lineTo(p.x, p.y);
+    ctx.strokeStyle = "#3b3a3f";
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = "round";
+    ctx.stroke();
+    points.current.push(p);
+    currentStroke.current.push(p);
+    lastPoint.current = p;
+  }
+  function handlePointerUp() {
+    if (!drawing.current) return;
+    drawing.current = false;
+    if (currentStroke.current.length) strokes.current.push(currentStroke.current);
+  }
+
+  function clearCanvas() {
+    const canvas = canvasRef.current!;
+    canvas.getContext("2d")!.clearRect(0, 0, canvas.width, canvas.height);
+    points.current = [];
+    strokes.current = [];
+    strokeCount.current = 0;
+    pauseCount.current = 0;
+    lastPoint.current = null;
+    setHasDrawn(false);
+    setDone(false);
+    setMetrics(null);
+  }
+
+  async function analyzeDrawing() {
+    if (points.current.length < 12) {
+      setError("Please write the full sentence before analyzing.");
+      return;
+    }
+    setError("");
+    setGeminiAnalysis(null);
+
+    // Fast, offline check first: does this actually look like writing spread across the box,
+    // or just scribbling in place? Runs regardless of whether a Gemini key is set, since the
+    // geometric score further down can't otherwise tell the two apart.
+    const canvasEl = canvasRef.current!;
+    const sanity = assessDrawingSanity(points.current, strokeCount.current, canvasEl.width, prompt);
+    if (!sanity.looksValid) {
+      setError(sanity.reason || "That doesn't look like real handwriting - please try again.");
+      return;
+    }
+
+    // The on-screen pen metrics alone (pauses, speed, stroke count) can't tell real writing
+    // apart from fast meaningless scribbling - so if a Gemini key is available, we run the
+    // same real content check used for uploaded photos against the drawing itself.
+    const key = getGeminiKey();
+    if (key) {
+      setBusy(true);
+      const canvas = canvasRef.current!;
+      try {
+        const drawingFile = await canvasToFile(canvas);
+        const result = await analyzeHandwritingPhoto(drawingFile, key, prompt);
+        setBusy(false);
+        if (!result.ok) {
+          setError(result.reason);
+          return;
+        }
+        const p = probabilityFromGeminiAnalysis(result.analysis);
+        const b = bandFor(p);
+        setGeminiAnalysis(result.analysis);
+        setProbability(p);
+        setBand(b);
+        addHistoryEntry({ modality: "handwriting", probability: p, band: b, metrics: result.analysis, source: "drawn" });
+    markDailyActivity("handwriting");
+        setDone(true);
+        return;
+      } catch {
+        setBusy(false);
+        // fall through to the local geometric estimate below if the image export/API call failed
+      }
+    }
+
+    const m = computeHandwritingMetrics(points.current, strokes.current, strokeCount.current, pauseCount.current);
+    const p = probabilityFromHandwriting(m);
+    const b = bandFor(p);
+    setMetrics(m);
+    setProbability(p);
+    setBand(b);
+    addHistoryEntry({ modality: "handwriting", probability: p, band: b, metrics: m, source: "drawn" });
+    markDailyActivity("handwriting");
+    setDone(true);
+  }
+
+  async function analyzePhoto() {
+    setError("");
+    setGeminiAnalysis(null);
+    if (!file) {
+      setError("Please choose a photo first.");
+      return;
+    }
+    setGeminiKey(apiKey);
+    setBusy(true);
+    const result = await analyzeHandwritingPhoto(file, apiKey, prompt);
+    setBusy(false);
+    if (!result.ok) {
+      setError(result.reason);
+      return;
+    }
+    const p = probabilityFromGeminiAnalysis(result.analysis);
+    const b = bandFor(p);
+    setGeminiAnalysis(result.analysis);
+    setProbability(p);
+    setBand(b);
+    addHistoryEntry({ modality: "handwriting", probability: p, band: b, metrics: result.analysis, source: "photo" });
+    markDailyActivity("handwriting");
+    setDone(true);
+  }
+
+  return (
+    <div className="container" style={{ paddingTop: 56, paddingBottom: 96, maxWidth: 640 }}>
+      <RevealOnScroll>
+        <div className="runner-card">
+          <div
+            style={{
+              width: 48,
+              height: 48,
+              borderRadius: 12,
+              background: "var(--blue-deep)",
+              color: "var(--bg)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              margin: "0 auto 14px",
+            }}
+          >
+            <PenLine size={24} />
+          </div>
+          <h1 style={{ fontSize: 24, fontWeight: 800, marginBottom: 6, textAlign: "center" }}>Handwriting test</h1>
+          <p className="text-text-soft" style={{ textAlign: "center", marginBottom: 20, fontSize: 14 }}>
+            Write the sentence below, or upload a photo of your handwriting
+          </p>
+
+          <div style={{ display: "flex", gap: 8, justifyContent: "center", marginBottom: 22 }}>
+            <button className={`diff-btn ${mode === "draw" ? "active" : ""}`} onClick={() => setMode("draw")}>
+              Draw on screen
+            </button>
+            <button className={`diff-btn ${mode === "photo" ? "active" : ""}`} onClick={() => setMode("photo")}>
+              Upload a photo
+            </button>
+          </div>
+
+          {!done && (
+            <div style={{ marginBottom: 18 }}>
+              <div style={{ textAlign: "center", marginBottom: 8 }}>
+                <span style={{ fontSize: 13, color: "var(--text-soft)", fontWeight: 600 }}>Difficulty</span>
+              </div>
+              <DifficultySelector value={difficulty} onChange={setDifficulty} />
+            </div>
+          )}
+
+          {!done && (
+            <div
+              className="card"
+              style={{ padding: "16px 20px", background: "var(--bg)", fontSize: 17, marginBottom: 20, textAlign: "center" }}
+            >
+              "{prompt}"
+            </div>
+          )}
+
+          {error && <div style={{ color: "var(--text)", fontWeight: 700, fontSize: 13.5, marginBottom: 16, borderLeft: "3px solid var(--text)", paddingLeft: 10 }}>{error}</div>}
+
+          {!done && mode === "draw" && (
+            <div>
+              <canvas
+                ref={canvasRef}
+                width={560}
+                height={200}
+                style={{ width: "100%", height: 200, border: "1px solid var(--border)", borderRadius: 12, background: "#fff", touchAction: "none" }}
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
+                onPointerLeave={handlePointerUp}
+              />
+              <div style={{ display: "flex", gap: 10, justifyContent: "center", marginTop: 16 }}>
+                <button className="btn btn-secondary" onClick={clearCanvas}>
+                  Clear
+                </button>
+                <button className="btn btn-primary" disabled={!hasDrawn || busy} onClick={analyzeDrawing}>
+                  {busy ? "Analyzing…" : "Analyze"}
+                </button>
+              </div>
+              <p className="text-text-soft" style={{ fontSize: 12, marginTop: 12, textAlign: "center" }}>
+                {getGeminiKey()
+                  ? "Your drawing is checked with AI to confirm it's real writing, not just scribbling."
+                  : "Add a Gemini API key in Photo mode to get a real content check - without one, this only measures pen speed and pauses, so it can't tell scribbling apart from real writing."}
+              </p>
+            </div>
+          )}
+
+          {!done && mode === "photo" && (
+            <div>
+              <div className="field" style={{ marginBottom: 14 }}>
+                <label>Gemini API key</label>
+                <input value={apiKey} onChange={(e) => setApiKeyState(e.target.value)} placeholder="Paste your key" />
+              </div>
+              <div className="field" style={{ marginBottom: 18 }}>
+                <label>Photo of handwriting</label>
+                <FileUploadZone kind="image" onFileSelected={(f) => setFile(f)} />
+              </div>
+              <div style={{ textAlign: "center" }}>
+                <button className="btn btn-primary" disabled={busy} onClick={analyzePhoto}>
+                  {busy ? "Analyzing…" : "Analyze photo"}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {done && (
+            <div>
+              <ScoreBlock probability={probability} band={band} />
+              {metrics && !geminiAnalysis && (
+                <BreakdownGrid
+                  items={[
+                    { value: `${metrics.strokeCount}`, label: "Strokes used", note: "How many separate pen strokes it took to write it." },
+                    { value: `${metrics.pauseCount}`, label: "Mid-stroke pauses", note: "Times your pen slowed or stopped in the middle of a stroke." },
+                    { value: `${Math.round(metrics.avgSpeed)} px/s`, label: "Writing speed", note: "How quickly you moved while writing." },
+                    { value: `${metrics.totalTimeSec.toFixed(1)}s`, label: "Total time", note: "How long it took to write the sentence." },
+                  ]}
+                />
+              )}
+              {geminiAnalysis && (
+                <BreakdownGrid
+                  items={[
+                    { value: `${geminiAnalysis.legibility}/100`, label: "Legibility", note: "How easy your handwriting was to read." },
+                    { value: `${geminiAnalysis.strokeSteadiness}/100`, label: "Stroke steadiness", note: "How steady, versus shaky, your pen strokes looked." },
+                    { value: `${geminiAnalysis.spacingConsistency}/100`, label: "Spacing", note: "How even the spacing was between your letters and words." },
+                    { value: `${geminiAnalysis.letterSizeConsistency}/100`, label: "Letter size", note: "How consistent your letter sizes were." },
+                  ]}
+                />
+              )}
+              {geminiAnalysis?.notes && (
+                <p className="text-text-soft" style={{ fontSize: 13.5, marginTop: 6 }}>{geminiAnalysis.notes}</p>
+              )}
+              <div style={{ textAlign: "center", marginTop: 20 }}>
+                <ButtonHoldAndRelease
+                  holdDuration={1200}
+                  label="Hold to discard & try again"
+                  holdingLabel="Keep holding…"
+                  onComplete={() => {
+                    clearCanvas();
+                    setGeminiAnalysis(null);
+                    setFile(null);
+                    setPrompt(pickPrompt(difficulty));
+                  }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      </RevealOnScroll>
+    </div>
+  );
+}

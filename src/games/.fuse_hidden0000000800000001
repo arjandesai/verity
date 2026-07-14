@@ -1,0 +1,133 @@
+import * as React from "react";
+import { useEffect, useState } from "react";
+import { updateGameBest } from "@/lib/verity";
+import type { Difficulty } from "@/components/LevelBar";
+
+const ROUNDS = 6;
+
+interface Item {
+  word: string;
+  category: "Living" | "Non-living";
+}
+
+// Higher difficulty introduces trickier, more ambiguous-sounding items.
+const BANKS: Record<Difficulty, Item[]> = {
+  Easy: [
+    { word: "Dog", category: "Living" },
+    { word: "Chair", category: "Non-living" },
+    { word: "Tree", category: "Living" },
+    { word: "Rock", category: "Non-living" },
+    { word: "Bird", category: "Living" },
+    { word: "Spoon", category: "Non-living" },
+  ],
+  Medium: [
+    { word: "Mushroom", category: "Living" },
+    { word: "Cloud", category: "Non-living" },
+    { word: "Coral", category: "Living" },
+    { word: "Battery", category: "Non-living" },
+    { word: "Moss", category: "Living" },
+    { word: "Candle", category: "Non-living" },
+  ],
+  Hard: [
+    { word: "Bacteria", category: "Living" },
+    { word: "Glacier", category: "Non-living" },
+    { word: "Yeast", category: "Living" },
+    { word: "Fossil", category: "Non-living" },
+    { word: "Algae", category: "Living" },
+    { word: "Coral reef skeleton", category: "Non-living" },
+  ],
+  Extreme: [
+    { word: "Virus", category: "Non-living" },
+    { word: "Lichen", category: "Living" },
+    { word: "Amber", category: "Non-living" },
+    { word: "Spore", category: "Living" },
+    { word: "Driftwood", category: "Non-living" },
+    { word: "Plankton", category: "Living" },
+  ],
+};
+
+export function CategorySort({ difficulty, onWin }: { difficulty: Difficulty; onWin: (isNewBest?: boolean) => void }) {
+  const [round, setRound] = useState(0);
+  const [current, setCurrent] = useState<Item>(() => BANKS[difficulty][0]);
+  const [selected, setSelected] = useState<"Living" | "Non-living" | null>(null);
+  const [score, setScore] = useState(0);
+  const [done, setDone] = useState(false);
+  const [isNewBest, setIsNewBest] = useState(false);
+
+  useEffect(() => {
+    reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [difficulty]);
+
+  function reset() {
+    setRound(0);
+    setScore(0);
+    setDone(false);
+    setIsNewBest(false);
+    setSelected(null);
+    setCurrent(BANKS[difficulty][0]);
+  }
+
+  function handleChoice(choice: "Living" | "Non-living") {
+    if (selected) return;
+    setSelected(choice);
+    const correct = choice === current.category;
+    setTimeout(() => {
+      if (round + 1 >= ROUNDS) {
+        const finalScore = score + (correct ? 1 : 0);
+        setDone(true);
+        setIsNewBest(updateGameBest("category", finalScore, true));
+        if (finalScore >= Math.ceil(ROUNDS * 0.6)) onWin(isBest);
+      } else {
+        if (correct) setScore((s) => s + 1);
+        const next = round + 1;
+        setRound(next);
+        setSelected(null);
+        setCurrent(BANKS[difficulty][next % BANKS[difficulty].length]);
+      }
+    }, 500);
+  }
+
+  if (done) {
+    return (
+      <div style={{ textAlign: "center" }}>
+        <p style={{ fontWeight: 700, marginBottom: 10 }}>
+          You got {score}/{ROUNDS} right{score >= Math.ceil(ROUNDS * 0.6) ? " 🎉" : ""} {isNewBest && "New personal best!"}
+        </p>
+        <button className="btn btn-primary" onClick={reset}>
+          Play again
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ textAlign: "center" }}>
+      <p className="text-text-soft" style={{ marginBottom: 6 }}>
+        Round {round + 1}/{ROUNDS} · Score {score}
+      </p>
+      <h3 style={{ fontSize: 28, fontWeight: 800, marginBottom: 24 }}>{current.word}</h3>
+      <div style={{ display: "flex", gap: 14, justifyContent: "center" }}>
+        {(["Living", "Non-living"] as const).map((c) => {
+          const isCorrect = c === current.category;
+          const showState = selected !== null;
+          return (
+            <button
+              key={c}
+              className="btn"
+              style={{
+                background: showState && isCorrect ? "var(--blue-deep)" : showState && selected === c ? "var(--text-soft)" : "var(--bg)",
+                color: showState && (isCorrect || selected === c) ? "var(--bg)" : "var(--text)",
+                border: "1px solid var(--border)",
+                minWidth: 130,
+              }}
+              onClick={() => handleChoice(c)}
+            >
+              {c}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,126 @@
+import * as React from "react";
+import { useEffect, useState } from "react";
+import { updateGameBest } from "@/lib/verity";
+import type { Difficulty } from "@/components/LevelBar";
+
+const ROUNDS = 5;
+const EMOJI_PAIRS: [string, string][] = [
+  ["🍎", "🍏"],
+  ["🌕", "🌑"],
+  ["⭐", "🌟"],
+  ["🔵", "🟢"],
+  ["🐱", "🐯"],
+  ["🌸", "🌺"],
+  ["🍊", "🍋"],
+  ["🟥", "🟧"],
+];
+// Higher difficulty = bigger grid, so the odd one out is harder to spot quickly.
+const GRID_SIZE: Record<Difficulty, number> = { Easy: 9, Medium: 12, Hard: 16, Extreme: 20 };
+
+interface RoundData {
+  items: string[];
+  oddIndex: number;
+}
+
+function makeRound(difficulty: Difficulty): RoundData {
+  const size = GRID_SIZE[difficulty];
+  const [common, odd] = EMOJI_PAIRS[Math.floor(Math.random() * EMOJI_PAIRS.length)];
+  const oddIndex = Math.floor(Math.random() * size);
+  const items = Array.from({ length: size }, (_, i) => (i === oddIndex ? odd : common));
+  return { items, oddIndex };
+}
+
+export function OddOneOut({ difficulty, onWin }: { difficulty: Difficulty; onWin: (isNewBest?: boolean) => void }) {
+  const [round, setRound] = useState(0);
+  const [data, setData] = useState<RoundData>(() => makeRound(difficulty));
+  const [selected, setSelected] = useState<number | null>(null);
+  const [score, setScore] = useState(0);
+  const [done, setDone] = useState(false);
+  const [isNewBest, setIsNewBest] = useState(false);
+
+  useEffect(() => {
+    reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [difficulty]);
+
+  function reset() {
+    setRound(0);
+    setScore(0);
+    setDone(false);
+    setIsNewBest(false);
+    setSelected(null);
+    setData(makeRound(difficulty));
+  }
+
+  function handlePick(i: number) {
+    if (selected !== null) return;
+    setSelected(i);
+    const correct = i === data.oddIndex;
+    setTimeout(() => {
+      if (round + 1 >= ROUNDS) {
+        const finalScore = score + (correct ? 1 : 0);
+        setDone(true);
+        const best = updateGameBest("oddoneout", finalScore, true);
+        setIsNewBest(best);
+        if (finalScore >= Math.ceil(ROUNDS * 0.6)) onWin(best);
+      } else {
+        if (correct) setScore((s) => s + 1);
+        setRound((r) => r + 1);
+        setSelected(null);
+        setData(makeRound(difficulty));
+      }
+    }, 500);
+  }
+
+  if (done) {
+    return (
+      <div style={{ textAlign: "center" }}>
+        <p style={{ fontWeight: 700, marginBottom: 10 }}>
+          You got {score}/{ROUNDS} right{score >= Math.ceil(ROUNDS * 0.6) ? " 🎉" : ""} {isNewBest && "New personal best!"}
+        </p>
+        <button className="btn btn-primary" onClick={reset}>
+          Play again
+        </button>
+      </div>
+    );
+  }
+
+  const cols = data.items.length <= 9 ? 3 : data.items.length <= 12 ? 4 : data.items.length <= 16 ? 4 : 5;
+
+  return (
+    <div style={{ textAlign: "center" }}>
+      <p className="text-text-soft" style={{ marginBottom: 14 }}>
+        Round {round + 1}/{ROUNDS} · Score {score} - tap the one that's different
+      </p>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: `repeat(${cols}, 1fr)`,
+          gap: 8,
+          maxWidth: 360,
+          margin: "0 auto",
+        }}
+      >
+        {data.items.map((emoji, i) => {
+          const isOdd = i === data.oddIndex;
+          const showState = selected !== null;
+          return (
+            <button
+              key={i}
+              onClick={() => handlePick(i)}
+              className="match-card"
+              style={{
+                fontSize: 24,
+                background: showState && isOdd ? "var(--text-soft)" : showState && selected === i ? "var(--border)" : "var(--blue-deep)",
+                borderColor: "var(--blue-deep)",
+                aspectRatio: 1,
+              }}
+            >
+              {emoji}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}

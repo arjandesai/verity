@@ -1,0 +1,84 @@
+import * as React from "react";
+import { useEffect, useState } from "react";
+import { shuffle, updateGameBest } from "@/lib/verity";
+import type { Difficulty } from "@/components/LevelBar";
+
+const ICONS = ["🌸", "🐝", "🍀", "🌙", "⭐", "🍎", "🎈", "🐳", "🔔", "🌈", "🦋", "🍋"];
+
+const PAIR_COUNT: Record<Difficulty, number> = { Easy: 4, Medium: 6, Hard: 8, Extreme: 10 };
+
+export function MemoryMatch({ difficulty, onWin }: { difficulty: Difficulty; onWin: (isNewBest?: boolean) => void }) {
+  const pairCount = PAIR_COUNT[difficulty];
+  const [cards, setCards] = useState<string[]>([]);
+  const [flipped, setFlipped] = useState<number[]>([]);
+  const [matched, setMatched] = useState<number[]>([]);
+  const [won, setWon] = useState(false);
+  const [startedAt, setStartedAt] = useState(0);
+  const [isNewBest, setIsNewBest] = useState(false);
+
+  useEffect(() => {
+    reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [difficulty]);
+
+  function reset() {
+    const icons = ICONS.slice(0, pairCount);
+    setCards(shuffle([...icons, ...icons]));
+    setFlipped([]);
+    setMatched([]);
+    setWon(false);
+    setIsNewBest(false);
+    setStartedAt(Date.now());
+  }
+
+  function handleClick(i: number) {
+    if (flipped.length === 2 || flipped.includes(i) || matched.includes(i)) return;
+    const next = [...flipped, i];
+    setFlipped(next);
+    if (next.length === 2) {
+      const [a, b] = next;
+      if (cards[a] === cards[b]) {
+        const nextMatched = [...matched, a, b];
+        setMatched(nextMatched);
+        setFlipped([]);
+        if (nextMatched.length === cards.length) {
+          setWon(true);
+          const seconds = Math.max(1, Math.round((Date.now() - startedAt) / 1000));
+          const best = updateGameBest("memory", seconds, false);
+          setIsNewBest(best);
+          onWin(best);
+        }
+      } else {
+        setTimeout(() => setFlipped([]), 700);
+      }
+    }
+  }
+
+  const cols = pairCount <= 4 ? 4 : pairCount <= 6 ? 4 : 5;
+
+  return (
+    <div>
+      <div style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 10 }}>
+        {cards.map((icon, i) => (
+          <button
+            key={i}
+            className={`match-card ${flipped.includes(i) || matched.includes(i) ? "flipped" : ""} ${matched.includes(i) ? "matched" : ""}`}
+            onClick={() => handleClick(i)}
+          >
+            {flipped.includes(i) || matched.includes(i) ? icon : ""}
+          </button>
+        ))}
+      </div>
+      {won && (
+        <div style={{ textAlign: "center", marginTop: 20 }}>
+          <p style={{ fontWeight: 700, marginBottom: 10 }}>
+            You matched every pair! 🎉 {isNewBest && "New personal best!"}
+          </p>
+          <button className="btn btn-primary" onClick={reset}>
+            Play again
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
