@@ -321,7 +321,7 @@ export default function Handwriting() {
 
           {done && (
             <div>
-              <ScoreBlock probability={probability} band={band} />
+              <ScoreBlock probability={probability} band={band} modality="Handwriting test" />
               {metrics && !geminiAnalysis && (
                 <BreakdownGrid
                   items={[

@@ -207,6 +207,7 @@ export default function Speech() {
   const [levels, setLevels] = useState<number[]>(Array(24).fill(0));
   const [apiKey, setApiKeyState] = useState(getGeminiKey());
   const lastBlobRef = useRef<Blob | null>(null);
+  const stopResolveRef = useRef<(() => void) | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
@@ -256,6 +257,8 @@ export default function Speech() {
         const blob = new Blob(chunksRef.current, { type: "audio/webm" });
         lastBlobRef.current = blob;
         setAudioUrl(URL.createObjectURL(blob));
+        stopResolveRef.current?.();
+        stopResolveRef.current = null;
       };
       mr.start();
       startTimeRef.current = Date.now();
@@ -292,21 +295,29 @@ export default function Speech() {
   async function stopRecording() {
     cancelAnimationFrame(rafRef.current);
     clearInterval(timerRef.current);
-    mediaRecorderRef.current?.stop();
-    streamRef.current?.getTracks().forEach((t) => t.stop());
-    audioCtxRef.current?.close();
 
     const durationSec = (Date.now() - startTimeRef.current) / 1000;
     const samples = samplesRef.current;
+
+    // Wait for the MediaRecorder's onstop event to actually fire and populate the blob,
+    // instead of guessing at a fixed delay - a slow device or a big recording could otherwise
+    // leave lastBlobRef pointing at stale or missing audio by the time we read it.
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state !== "inactive") {
+      const stopped = new Promise<void>((resolve) => {
+        stopResolveRef.current = resolve;
+      });
+      recorder.stop();
+      await stopped;
+    }
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    audioCtxRef.current?.close();
+
     if (samples.length < 8 || durationSec < 1.5) {
       setError("That recording was too short - please try again and read the whole passage.");
       setStage("idle");
       return;
     }
-
-    // Give the MediaRecorder's onstop handler a moment to actually populate the blob before
-    // we try to read it.
-    await new Promise((r) => setTimeout(r, 150));
 
     if (apiKey && lastBlobRef.current) {
       setBusy(true);
@@ -422,59 +433,59 @@ export default function Speech() {
           </p>
 
           {stage === "idle" && (
-            <div style={{ marginBottom: 18 }}>
-              <div style={{ textAlign: "center", marginBottom: 8 }}>
-                <span style={{ fontSize: 13, color: "var(--text-soft)", fontWeight: 600 }}>Difficulty</span>
+            <div style={{ opacity: busy ? 0.5 : 1, pointerEvents: busy ? "none" : "auto" }}>
+              <div style={{ marginBottom: 18 }}>
+                <div style={{ textAlign: "center", marginBottom: 8 }}>
+                  <span style={{ fontSize: 13, color: "var(--text-soft)", fontWeight: 600 }}>Difficulty</span>
+                </div>
+                <DifficultySelector value={difficulty} onChange={setDifficulty} />
               </div>
-              <DifficultySelector value={difficulty} onChange={setDifficulty} />
-            </div>
-          )}
 
-          {stage === "idle" && (
-            <div style={{ marginBottom: 18 }}>
-              <div style={{ textAlign: "center", marginBottom: 8 }}>
-                <span style={{ fontSize: 13, color: "var(--text-soft)", fontWeight: 600 }}>Language</span>
+              <div style={{ marginBottom: 18 }}>
+                <div style={{ textAlign: "center", marginBottom: 8 }}>
+                  <span style={{ fontSize: 13, color: "var(--text-soft)", fontWeight: 600 }}>Language</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "center" }}>
+                  <select
+                    value={language}
+                    onChange={(e) => changeLanguage(e.target.value as SpeechLanguageCode)}
+                    disabled={busy}
+                    style={{
+                      padding: "8px 14px",
+                      borderRadius: 999,
+                      border: "1px solid var(--border)",
+                      background: "var(--card)",
+                      color: "var(--text)",
+                      fontSize: 13.5,
+                      fontWeight: 600,
+                    }}
+                  >
+                    {SPEECH_LANGUAGES.map((l) => (
+                      <option key={l.code} value={l.code}>
+                        {l.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
-              <div style={{ display: "flex", justifyContent: "center" }}>
-                <select
-                  value={language}
-                  onChange={(e) => changeLanguage(e.target.value as SpeechLanguageCode)}
-                  style={{
-                    padding: "8px 14px",
-                    borderRadius: 999,
-                    border: "1px solid var(--border)",
-                    background: "var(--card)",
-                    color: "var(--text)",
-                    fontSize: 13.5,
-                    fontWeight: 600,
+
+              <div className="field" style={{ marginBottom: 18, maxWidth: 360, marginLeft: "auto", marginRight: "auto" }}>
+                <label>Gemini API key (for real, strict AI scoring)</label>
+                <input
+                  value={apiKey}
+                  disabled={busy}
+                  onChange={(e) => {
+                    setApiKeyState(e.target.value);
+                    setGeminiKey(e.target.value);
                   }}
-                >
-                  {SPEECH_LANGUAGES.map((l) => (
-                    <option key={l.code} value={l.code}>
-                      {l.label}
-                    </option>
-                  ))}
-                </select>
+                  placeholder="Paste your key"
+                />
+                <p className="text-text-soft" style={{ fontSize: 12, marginTop: 6 }}>
+                  {apiKey
+                    ? "Your recording is transcribed and scored by AI - a strict reading, not a lenient one."
+                    : "Without a key, scoring falls back to a local pause/volume estimate instead of real transcription."}
+                </p>
               </div>
-            </div>
-          )}
-
-          {stage === "idle" && (
-            <div className="field" style={{ marginBottom: 18, maxWidth: 360, marginLeft: "auto", marginRight: "auto" }}>
-              <label>Gemini API key (for real, strict AI scoring)</label>
-              <input
-                value={apiKey}
-                onChange={(e) => {
-                  setApiKeyState(e.target.value);
-                  setGeminiKey(e.target.value);
-                }}
-                placeholder="Paste your key"
-              />
-              <p className="text-text-soft" style={{ fontSize: 12, marginTop: 6 }}>
-                {apiKey
-                  ? "Your recording is transcribed and scored by AI - a strict reading, not a lenient one."
-                  : "Without a key, scoring falls back to a local pause/volume estimate instead of real transcription."}
-              </p>
             </div>
           )}
 
@@ -488,7 +499,7 @@ export default function Speech() {
           {error && <div style={{ color: "var(--text)", fontWeight: 700, fontSize: 13.5, marginBottom: 16, borderLeft: "3px solid var(--text)", paddingLeft: 10 }}>{error}</div>}
 
           {stage !== "done" && (
-            <div style={{ textAlign: "center" }}>
+            <div style={{ textAlign: "center", opacity: busy ? 0.5 : 1, pointerEvents: busy ? "none" : "auto" }}>
               <AIVoiceInput
                 onStart={startRecording}
                 onStop={stopRecording}
@@ -523,7 +534,7 @@ export default function Speech() {
 
           {stage === "done" && (metrics || geminiAnalysis) && (
             <div>
-              <ScoreBlock probability={probability} band={band} />
+              <ScoreBlock probability={probability} band={band} modality="Speech test" />
               {metrics && !geminiAnalysis && (
                 <BreakdownGrid
                   items={[

@@ -1,10 +1,14 @@
 import * as React from "react";
-import { CheckCircle2, AlertTriangle, AlertCircle } from "lucide-react";
+import { useState } from "react";
+import { CheckCircle2, AlertTriangle, AlertCircle, Copy, Check } from "lucide-react";
 import { bandClass, bandColor, bandLabel, type Band } from "@/lib/verity";
 
 interface ScoreBlockProps {
   probability: number;
   band: Band;
+  /** When set, shows a "Copy summary" button that copies a plain-text result summary - handy
+   *  for pasting into a message to a doctor or family member without screenshotting. */
+  modality?: string;
 }
 
 /** Converts a 0-1 probability into a friendlier 1-10 scale, 1 = very low, 10 = very high. */
@@ -39,11 +43,30 @@ export function verdictFor(band: Band): { label: string; note: string; icon: typ
   };
 }
 
-export function ScoreBlock({ probability, band }: ScoreBlockProps) {
+export function ScoreBlock({ probability, band, modality }: ScoreBlockProps) {
   const pct = Math.round(probability * 100);
   const scale = scaleOf10(probability);
   const verdict = verdictFor(band);
   const Icon = verdict.icon;
+  const [copied, setCopied] = useState(false);
+
+  async function copySummary() {
+    const date = new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
+    const text =
+      `Verity ${modality || "screening"} result - ${date}\n` +
+      `Score: ${pct}% (${scale}/10, lower is generally better)\n` +
+      `Status: ${bandLabel(band)}\n` +
+      `${verdict.note}\n\n` +
+      `This is from a non-clinical screening demo, not a medical diagnosis.`;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      /* clipboard permission denied - fail quietly, button just won't confirm */
+    }
+  }
+
   return (
     <div className="score-hero">
       <div
@@ -76,6 +99,16 @@ export function ScoreBlock({ probability, band }: ScoreBlockProps) {
       <div className={`band-pill ${bandClass(band)}`} style={{ marginTop: 10 }}>
         {bandLabel(band)}
       </div>
+      {modality && (
+        <button
+          className="btn btn-secondary btn-sm"
+          onClick={copySummary}
+          style={{ marginTop: 16, display: "inline-flex", alignItems: "center", gap: 6 }}
+        >
+          {copied ? <Check size={14} /> : <Copy size={14} />}
+          {copied ? "Copied" : "Copy summary"}
+        </button>
+      )}
     </div>
   );
 }
