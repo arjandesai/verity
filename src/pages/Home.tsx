@@ -14,6 +14,7 @@ import ClippedVideoTab from "@/components/ui/clipped-video-tab";
 import Testimonials from "@/components/ui/testimonial-v2";
 import { BouncyCardsFeatures } from "@/components/ui/bounce-card-features";
 import InteractiveHeroBg from "@/components/ui/interactive-hero-bg";
+import HeroBrain from "@/components/ui/hero-brain";
 
 const TECH_LOGOS = [
   { src: "https://cdn.simpleicons.org/react/61DAFB", alt: "React" },
@@ -55,6 +56,7 @@ export default function Home() {
         }}
       >
         <InteractiveHeroBg />
+        <HeroBrain />
         <div
           style={{
             position: "absolute",
