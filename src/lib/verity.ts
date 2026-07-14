@@ -103,6 +103,12 @@ function getAccounts(): Account[] {
 function saveAccounts(accounts: Account[]) {
   safeSet(LS_ACCOUNTS, JSON.stringify(accounts));
 }
+/** Number of accounts created on this device. Since Verity is a fully client-side
+    demo with no shared backend, this reflects signups on this browser only - not a
+    real global count across everyone who visits the site. */
+export function getAccountCount(): number {
+  return getAccounts().length;
+}
 function randomSalt(): string {
   const arr = new Uint8Array(16);
   (window.crypto || (window as any).msCrypto).getRandomValues(arr);

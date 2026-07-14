@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { getUser, type VerityUser } from "@/lib/verity";
+import { getUser, getAccountCount, type VerityUser } from "@/lib/verity";
 import { MagneticButton } from "@/components/MagneticButton";
 import { RevealOnScroll } from "@/components/RevealOnScroll";
 import { FlipWord } from "@/components/TypewriterText";
@@ -31,9 +31,11 @@ const TECH_LOGOS = [
 
 export default function Home() {
   const [user, setUser] = useState<VerityUser | null>(null);
+  const [accountCount, setAccountCount] = useState(0);
 
   useEffect(() => {
     setUser(getUser());
+    setAccountCount(getAccountCount());
   }, []);
 
   return (
@@ -96,6 +98,13 @@ export default function Home() {
               </Link>
             </div>
           </RevealOnScroll>
+          {accountCount > 0 && (
+            <RevealOnScroll delay={0.4}>
+              <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 13.5, marginTop: 18 }}>
+                {accountCount.toLocaleString()} {accountCount === 1 ? "person has" : "people have"} joined Verity so far
+              </p>
+            </RevealOnScroll>
+          )}
         </div>
       </section>
 
