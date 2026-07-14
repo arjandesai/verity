@@ -312,6 +312,21 @@ export default function Dashboard() {
         </p>
       </RevealOnScroll>
 
+      {history.length > 0 && (
+        <RevealOnScroll delay={0.02}>
+          <div className="card" style={{ padding: 24, marginBottom: 24, textAlign: "center" }}>
+            <p className="text-text-soft" style={{ fontSize: 13, fontWeight: 600, marginBottom: 14 }}>
+              Latest rating - {[...history].reverse()[0].modality}
+            </p>
+            <ProgressIndicator
+              steps={BAND_STEPS}
+              activeStep={bandIndex([...history].reverse()[0].band)}
+              autoPlay={false}
+            />
+          </div>
+        </RevealOnScroll>
+      )}
+
       <RevealOnScroll delay={0.05}>
         <div className="grid md:grid-cols-3 gap-4" style={{ marginBottom: 30 }}>
           <div className="card" style={{ padding: 22 }}>
@@ -402,14 +417,9 @@ export default function Dashboard() {
                   <div style={{ fontWeight: 700, fontSize: 14.5, textTransform: "capitalize" }}>{h.modality}</div>
                   <div style={{ fontSize: 12.5, color: "var(--text-soft)" }}>{new Date(h.timestamp).toLocaleString()}</div>
                 </div>
-                <div style={{ textAlign: "right", display: "flex", alignItems: "center", gap: 14 }}>
-                  <div style={{ transform: "scale(0.62)", transformOrigin: "right center" }}>
-                    <ProgressIndicator steps={BAND_STEPS} activeStep={bandIndex(h.band)} autoPlay={false} />
-                  </div>
-                  <div>
-                    <div style={{ fontWeight: 800, fontSize: 18, color: bandColor(h.band) }}>{Math.round(h.probability * 100)}%</div>
-                    <div style={{ fontSize: 12, color: "var(--text-soft)" }}>{bandLabel(h.band)}</div>
-                  </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontWeight: 800, fontSize: 18, color: bandColor(h.band) }}>{Math.round(h.probability * 100)}%</div>
+                  <div style={{ fontSize: 12, color: "var(--text-soft)" }}>{bandLabel(h.band)}</div>
                 </div>
               </div>
             ))}
