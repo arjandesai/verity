@@ -21,7 +21,7 @@ function renderOutfitBack(outfit?: string | null) {
   if (outfit === "outfit-cape") {
     return (
       <path
-        d="M30 58 C 20 74 20 94 26 108 C 34 102 66 102 74 108 C 80 94 80 74 70 58 C 62 66 38 66 30 58 Z"
+        d="M28 60 C 18 78 18 98 24 112 C 34 105 66 105 76 112 C 82 98 82 78 72 60 C 62 68 38 68 28 60 Z"
         fill="#c1483b"
         stroke="#8f2f26"
         strokeWidth="1.5"
@@ -37,18 +37,18 @@ function renderOutfitFront(outfit?: string | null) {
     case "outfit-scarf":
       return (
         <>
-          <path d="M30 72 Q50 84 70 72 L70 80 Q50 90 30 80 Z" fill="#c1483b" />
-          <rect x="45" y="86" width="6.5" height="18" rx="3" fill="#c1483b" transform="rotate(-8 48 86)" />
+          <path d="M28 76 Q50 88 72 76 L72 84 Q50 94 28 84 Z" fill="#c1483b" />
+          <rect x="45" y="90" width="6.5" height="18" rx="3" fill="#c1483b" transform="rotate(-8 48 90)" />
         </>
       );
     case "outfit-bowtie":
-      return <path d="M42 76 L49 72 L49 81 L42 77 Z M58 76 L51 72 L51 81 L58 77 Z" fill="#2b3a67" />;
+      return <path d="M42 80 L49 76 L49 85 L42 81 Z M58 80 L51 76 L51 85 L58 81 Z" fill="#2b3a67" />;
     case "outfit-cape":
       return null;
     case "outfit-sweater":
       return (
         <path
-          d="M20 70 C 18 88 26 100 50 102 C 74 100 82 88 80 70 C 72 76 64 78 58 74 L 50 78 L 42 74 C 36 78 28 76 20 70 Z"
+          d="M18 74 C 16 92 26 104 50 106 C 74 104 84 92 82 74 C 72 80 64 82 58 78 L 50 82 L 42 78 C 36 82 28 80 18 74 Z"
           fill="#7fb0a3"
           opacity={0.92}
         />
@@ -56,9 +56,9 @@ function renderOutfitFront(outfit?: string | null) {
     case "outfit-sunglasses":
       return (
         <>
-          <rect x="26" y="52" width="22" height="12" rx="6" fill="#1c1c1e" />
-          <rect x="52" y="52" width="22" height="12" rx="6" fill="#1c1c1e" />
-          <rect x="48" y="55" width="4" height="3.5" rx="1.5" fill="#1c1c1e" />
+          <rect x="24" y="46" width="22" height="12" rx="6" fill="#1c1c1e" />
+          <rect x="54" y="46" width="22" height="12" rx="6" fill="#1c1c1e" />
+          <rect x="46" y="49" width="8" height="3.5" rx="1.5" fill="#1c1c1e" />
         </>
       );
     default:
@@ -70,26 +70,26 @@ function renderOutfitFront(outfit?: string | null) {
 function renderHat(hat?: string | null) {
   switch (hat) {
     case "hat-crown":
-      return <path d="M35 22 L38 8 L45 17 L50 6 L55 17 L62 8 L65 22 Z" fill="#f5c542" stroke="#c99a1f" strokeWidth="1.5" />;
+      return <path d="M35 18 L38 4 L45 13 L50 2 L55 13 L62 4 L65 18 Z" fill="#f5c542" stroke="#c99a1f" strokeWidth="1.5" />;
     case "hat-party":
       return (
         <>
-          <path d="M40 22 L50 -4 L60 22 Z" fill="#e0609c" stroke="#a83f6f" strokeWidth="1" />
-          <circle cx="50" cy="-4" r="3" fill="#fff" />
+          <path d="M40 18 L50 -8 L60 18 Z" fill="#e0609c" stroke="#a83f6f" strokeWidth="1" />
+          <circle cx="50" cy="-8" r="3" fill="#fff" />
         </>
       );
     case "hat-wizard":
       return (
         <>
-          <ellipse cx="50" cy="22" rx="17" ry="3.5" fill="#5b3fa0" />
-          <path d="M40 22 L50 -8 L60 22 Z" fill="#6b4bb3" stroke="#4a3380" strokeWidth="1" />
-          <circle cx="48" cy="6" r="1.4" fill="#f5d76e" />
+          <ellipse cx="50" cy="18" rx="17" ry="3.5" fill="#5b3fa0" />
+          <path d="M40 18 L50 -12 L60 18 Z" fill="#6b4bb3" stroke="#4a3380" strokeWidth="1" />
+          <circle cx="48" cy="2" r="1.4" fill="#f5d76e" />
         </>
       );
     case "hat-bow":
       return (
         <path
-          d="M38 14 L47 10 L47 18 L38 21 Z M62 14 L53 10 L53 18 L62 21 Z M47 11 L53 11 L53 17 L47 17 Z"
+          d="M38 10 L47 6 L47 14 L38 17 Z M62 10 L53 6 L53 14 L62 17 Z M47 7 L53 7 L53 13 L47 13 Z"
           fill="#e888b0"
           stroke="#c1608c"
           strokeWidth="1"
@@ -98,22 +98,24 @@ function renderHat(hat?: string | null) {
     case "hat-cap":
       return (
         <>
-          <path d="M32 20 A18 13 0 0 1 68 20 L68 25 L32 25 Z" fill="#3b5fb2" />
-          <path d="M50 24 Q64 24 68 28 Q58 26 50 27 Z" fill="#2b4788" />
+          <path d="M32 16 A18 13 0 0 1 68 16 L68 21 L32 21 Z" fill="#3b5fb2" />
+          <path d="M50 20 Q64 20 68 24 Q58 22 50 23 Z" fill="#2b4788" />
         </>
       );
     case "hat-halo":
-      return <ellipse cx="50" cy="6" rx="14" ry="4" fill="none" stroke="#f5d76e" strokeWidth="3" opacity={0.9} />;
+      return <ellipse cx="50" cy="2" rx="14" ry="4" fill="none" stroke="#f5d76e" strokeWidth="3" opacity={0.9} />;
     default:
       return null;
   }
 }
 
-/** Verity's mascot: a soft, puffy 5-point star - a friendly, abstract shape rather than a
- *  fruit or animal. Eyes track the mouse wherever it moves on the page, and clicking makes
- *  him react like he's just been poked. */
+/** Verity's mascot: a small, soft kawaii blob/fruit creature - a rounded oval body (wider at
+ *  the bottom), coral-to-orange-to-yellow gradient, tiny curved arms, thin stick legs with flat
+ *  feet, and a friendly open smile with a couple of tiny teeth and a little tongue. Eyes track
+ *  the mouse wherever it moves on the page, and clicking makes him react like he's just been
+ *  poked. */
 export function MangoAvatar({ size = 56, mouthOpen = true, className, onClick, hat, outfit, colors, gradientId = "mangoBody" }: MangoAvatarProps) {
-  const [c1, c2, c3] = colors || ["#8f7bf0", "#6f5fd6", "#4d3fb0"];
+  const [c1, c2, c3] = colors || ["#f2665c", "#f5924a", "#f7c94a"];
   const rootRef = useRef<SVGSVGElement>(null);
   const rafRef = useRef<number | null>(null);
   const [pupil, setPupil] = useState({ x: 0, y: 0 });
@@ -160,9 +162,9 @@ export function MangoAvatar({ size = 56, mouthOpen = true, className, onClick, h
   return (
     <motion.svg
       ref={rootRef}
-      viewBox="0 -10 100 120"
+      viewBox="0 -14 100 124"
       width={size}
-      height={size * 1.2}
+      height={size * 1.24}
       className={className}
       onClick={handleClick}
       animate={controls}
@@ -171,44 +173,50 @@ export function MangoAvatar({ size = 56, mouthOpen = true, className, onClick, h
       <defs>
         <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={c1} />
-          <stop offset="55%" stopColor={c2} />
+          <stop offset="50%" stopColor={c2} />
           <stop offset="100%" stopColor={c3} />
         </linearGradient>
       </defs>
 
-      {/* legs - short, close together, tucked under the bottom two points of the star */}
-      <rect x="41" y="98" width="7" height="12" rx="3.5" fill="#3d3080" />
-      <rect x="52" y="98" width="7" height="12" rx="3.5" fill="#3d3080" />
+      {/* legs - thin yellow-orange sticks with small flat feet */}
+      <rect x="38" y="98" width="5" height="16" rx="2.5" fill="#f0a441" />
+      <rect x="57" y="98" width="5" height="16" rx="2.5" fill="#f0a441" />
+      <ellipse cx="40.5" cy="115" rx="6" ry="2.6" fill="#e8912f" />
+      <ellipse cx="59.5" cy="115" rx="6" ry="2.6" fill="#e8912f" />
 
-      {/* arms - simple rounded sticks, attached at the star's left/right points */}
-      <rect x="4" y="46" width="8" height="22" rx="4" fill="#6f5fd6" transform="rotate(-16 8 57)" />
-      <rect x="88" y="46" width="8" height="22" rx="4" fill="#6f5fd6" transform="rotate(16 92 57)" />
+      {/* arms - tiny curved rounded shapes, same coral/orange as the body */}
+      <path d="M18 62 C 6 60 2 68 6 76 C 10 72 16 70 22 70 Z" fill={c1} />
+      <path d="M82 62 C 94 60 98 68 94 76 C 90 72 84 70 78 70 Z" fill={c1} />
 
       {renderOutfitBack(outfit)}
 
-      {/* body - a soft, puffy 5-point star (rounded, no sharp corners) */}
+      {/* body - a smooth rounded oval blob, a little wider at the bottom, no sharp edges */}
       <path
-        d="M37 46 C 46 30 46 30 55 46 C 74 51 74 51 61 65 C 65 84 65 84 47 76 C 29 84 29 84 33 65 C 20 51 20 51 39 46 Z"
+        d="M50 12
+           C 72 12 84 32 84 56
+           C 84 84 70 100 50 100
+           C 30 100 16 84 16 56
+           C 16 32 28 12 50 12 Z"
         fill={`url(#${gradientId})`}
       />
 
-      {/* blush cheeks */}
-      <ellipse cx="30" cy="66" rx="5.5" ry="3.2" fill="#ff8fae" opacity={0.32} />
-      <ellipse cx="70" cy="66" rx="5.5" ry="3.2" fill="#ff8fae" opacity={0.32} />
+      {/* eyes - large, round, kawaii-style with a shiny highlight; pupils follow the cursor */}
+      <circle cx="35" cy="50" r="11" fill="#fff" />
+      <circle cx="65" cy="50" r="11" fill="#fff" />
+      <motion.circle animate={{ cx: 35 + pupil.x, cy: 51 + pupil.y }} r="6" fill="#241f26" />
+      <motion.circle animate={{ cx: 65 + pupil.x, cy: 51 + pupil.y }} r="6" fill="#241f26" />
+      <motion.circle animate={{ cx: 32.4 + pupil.x * 0.5, cy: 47.8 + pupil.y * 0.5 }} r="2.1" fill="#fff" />
+      <motion.circle animate={{ cx: 62.4 + pupil.x * 0.5, cy: 47.8 + pupil.y * 0.5 }} r="2.1" fill="#fff" />
 
-      {/* eyes - simple, round, clearly separated from the mouth; pupils follow the cursor */}
-      <circle cx="38" cy="52" r="10" fill="#fff" />
-      <circle cx="62" cy="52" r="10" fill="#fff" />
-      <motion.circle animate={{ cx: 38 + pupil.x, cy: 52 + pupil.y }} r="5.5" fill="#241f26" />
-      <motion.circle animate={{ cx: 62 + pupil.x, cy: 52 + pupil.y }} r="5.5" fill="#241f26" />
-      <motion.circle animate={{ cx: 35.8 + pupil.x * 0.5, cy: 49.3 + pupil.y * 0.5 }} r="1.9" fill="#fff" />
-      <motion.circle animate={{ cx: 59.8 + pupil.x * 0.5, cy: 49.3 + pupil.y * 0.5 }} r="1.9" fill="#fff" />
-
-      {/* mouth - a simple, friendly smile; a small round open mouth when talking/celebrating */}
+      {/* mouth - small open smile with a dark interior, tiny teeth up top, and a little tongue */}
       {mouthOpen ? (
-        <ellipse cx="50" cy="68" rx="6.5" ry="5" fill="#241f26" />
+        <>
+          <ellipse cx="50" cy="72" rx="7.5" ry="6" fill="#241f26" />
+          <path d="M44 67.5 L47 71 L50 67.5 L53 71 L56 67.5" stroke="#fff" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+          <ellipse cx="50" cy="75.5" rx="3.2" ry="2" fill="#f5c542" />
+        </>
       ) : (
-        <path d="M41 66 Q50 73 59 66" stroke="#241f26" strokeWidth="3" fill="none" strokeLinecap="round" />
+        <path d="M42 70 Q50 77 58 70" stroke="#241f26" strokeWidth="3" fill="none" strokeLinecap="round" />
       )}
 
       {renderOutfitFront(outfit)}
