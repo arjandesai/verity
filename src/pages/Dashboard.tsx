@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { RevealOnScroll } from "@/components/RevealOnScroll";
 import { AwardBadge, type AwardTier } from "@/components/ui/award-badge";
+import ProgressIndicator from "@/components/ui/progress-indicator";
 import { ScoreTrendChart } from "@/components/ScoreTrendChart";
 import { Confetti } from "@/components/Confetti";
 import { useToast } from "@/components/Toast";
@@ -34,6 +35,11 @@ type ModalityFilter = "all" | "speech" | "handwriting";
 const ACHIEVEMENTS_PAGE_SIZE = 10;
 const STREAK_KEY = "verity_last_streak_celebrated";
 const STREAK_MILESTONES = [3, 7, 14, 30];
+
+const BAND_STEPS = ["Typical", "Some signs", "Several signs"];
+function bandIndex(band: HistoryEntry["band"]): number {
+  return { typical: 0, some: 1, several: 2 }[band];
+}
 
 function computeStreak(history: HistoryEntry[]): number {
   if (!history.length) return 0;
@@ -396,9 +402,14 @@ export default function Dashboard() {
                   <div style={{ fontWeight: 700, fontSize: 14.5, textTransform: "capitalize" }}>{h.modality}</div>
                   <div style={{ fontSize: 12.5, color: "var(--text-soft)" }}>{new Date(h.timestamp).toLocaleString()}</div>
                 </div>
-                <div style={{ textAlign: "right" }}>
-                  <div style={{ fontWeight: 800, fontSize: 18, color: bandColor(h.band) }}>{Math.round(h.probability * 100)}%</div>
-                  <div style={{ fontSize: 12, color: "var(--text-soft)" }}>{bandLabel(h.band)}</div>
+                <div style={{ textAlign: "right", display: "flex", alignItems: "center", gap: 14 }}>
+                  <div style={{ transform: "scale(0.62)", transformOrigin: "right center" }}>
+                    <ProgressIndicator steps={BAND_STEPS} activeStep={bandIndex(h.band)} autoPlay={false} />
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 800, fontSize: 18, color: bandColor(h.band) }}>{Math.round(h.probability * 100)}%</div>
+                    <div style={{ fontSize: 12, color: "var(--text-soft)" }}>{bandLabel(h.band)}</div>
+                  </div>
                 </div>
               </div>
             ))}
