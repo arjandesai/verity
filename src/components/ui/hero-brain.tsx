@@ -53,8 +53,8 @@ export default function HeroBrain({ className }: { className?: string }) {
         position: "absolute",
         left: "50%",
         top: "48%",
-        width: "62%",
-        maxWidth: 760,
+        width: "82%",
+        maxWidth: 980,
         transform: "translate(-50%, -50%)",
       }}
     >
