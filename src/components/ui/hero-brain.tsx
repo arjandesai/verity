@@ -6,10 +6,21 @@ import { motion } from "framer-motion";
     quietly on a dark hero background: soft outline, pulsing synapse dots, gentle float. */
 export default function HeroBrain({ className }: { className?: string }) {
   return (
-    <motion.svg
+    <div
       className={className}
+      style={{
+        position: "absolute",
+        left: "50%",
+        top: "48%",
+        width: "62%",
+        maxWidth: 760,
+        transform: "translate(-50%, -50%)",
+        pointerEvents: "none",
+      }}
+    >
+    <motion.svg
       viewBox="0 0 600 500"
-      style={{ position: "absolute", right: "4%", top: "50%", width: "38%", maxWidth: 480, pointerEvents: "none" }}
+      style={{ width: "100%", height: "auto", display: "block" }}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: [0, -14, 0] }}
       transition={{
@@ -76,5 +87,6 @@ export default function HeroBrain({ className }: { className?: string }) {
         ))}
       </g>
     </motion.svg>
+    </div>
   );
 }

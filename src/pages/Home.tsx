@@ -56,7 +56,7 @@ export default function Home() {
         }}
       >
         <div style={{ position: "absolute", inset: 0, background: "#0a0a0a" }} />
-        <InteractiveDots dotColor="#3d6bd6" dotSize={2.5} spacing={38} repelRadius={120} />
+        <InteractiveDots dotColor="#3d6bd6" dotSize={2.5} spacing={64} repelRadius={100} />
         <HeroBrain />
         <div
           style={{
