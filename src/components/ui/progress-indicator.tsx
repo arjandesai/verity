@@ -22,15 +22,16 @@ export default function ProgressIndicator({
   className,
 }: ProgressIndicatorProps) {
   const [internalStep, setInternalStep] = useState(0);
+  const [paused, setPaused] = useState(false);
   const step = activeStep ?? internalStep;
 
   useEffect(() => {
-    if (activeStep !== undefined || !autoPlay) return;
+    if (activeStep !== undefined || !autoPlay || paused) return;
     const id = setInterval(() => {
       setInternalStep((s) => (s + 1) % steps.length);
     }, intervalMs);
     return () => clearInterval(id);
-  }, [activeStep, autoPlay, intervalMs, steps.length]);
+  }, [activeStep, autoPlay, intervalMs, steps.length, paused]);
 
   return (
     <div className={cn("flex items-center justify-center gap-3", className)}>
@@ -38,7 +39,23 @@ export default function ProgressIndicator({
         <div key={label} className="flex items-center gap-3">
           <div className="flex flex-col items-center gap-1.5">
             <motion.div
-              className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold"
+              className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold cursor-pointer"
+              role="button"
+              tabIndex={0}
+              aria-label={`Jump to ${label} step`}
+              onClick={() => {
+                setPaused(true);
+                setInternalStep(i);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setPaused(true);
+                  setInternalStep(i);
+                }
+              }}
+              whileHover={{ scale: i === step ? 1.22 : 1.15 }}
+              whileTap={{ scale: 0.95 }}
               animate={{
                 backgroundColor: i <= step ? "var(--blue-deep)" : "var(--bg)",
                 color: i <= step ? "var(--bg)" : "var(--text-soft)",
