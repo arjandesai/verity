@@ -165,7 +165,7 @@ export default function Handwriting() {
         const drawingFile = await canvasToFile(canvas);
         const result = await analyzeHandwritingPhoto(drawingFile, key, prompt);
         setBusy(false);
-        if (!result.ok) {
+        if (result.ok === false) {
           setError(result.reason);
           return;
         }
@@ -206,7 +206,7 @@ export default function Handwriting() {
     setBusy(true);
     const result = await analyzeHandwritingPhoto(file, apiKey, prompt);
     setBusy(false);
-    if (!result.ok) {
+    if (result.ok === false) {
       setError(result.reason);
       return;
     }

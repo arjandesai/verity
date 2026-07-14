@@ -143,14 +143,14 @@ async function hashPassword(password: string, salt: string): Promise<string> {
 async function deriveAesKey(password: string, saltHex: string): Promise<CryptoKey> {
   const keyMaterial = await window.crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveKey"]);
   return window.crypto.subtle.deriveKey(
-    { name: "PBKDF2", salt: hexToBytes(saltHex), iterations: 100_000, hash: "SHA-256" },
+    { name: "PBKDF2", salt: hexToBytes(saltHex) as BufferSource, iterations: 100_000, hash: "SHA-256" },
     keyMaterial,
     { name: "AES-GCM", length: 256 },
     false,
     ["encrypt", "decrypt"]
   );
 }
-export async function encryptPersonalData(data: Record<string, unknown>, password: string): Promise<EncryptedBlob> {
+export async function encryptPersonalData<T extends object>(data: T, password: string): Promise<EncryptedBlob> {
   const plaintext = new TextEncoder().encode(JSON.stringify(data));
   if (!window.crypto?.subtle) {
     // Fallback for non-secure contexts without Web Crypto: base64 only (not real encryption).
@@ -172,7 +172,7 @@ export async function decryptPersonalData<T = Record<string, unknown>>(blob: Enc
   }
   try {
     const key = await deriveAesKey(password, blob.salt);
-    const plainBuf = await window.crypto.subtle.decrypt({ name: "AES-GCM", iv: hexToBytes(blob.iv) }, key, hexToBytes(blob.cipher));
+    const plainBuf = await window.crypto.subtle.decrypt({ name: "AES-GCM", iv: hexToBytes(blob.iv) as BufferSource }, key, hexToBytes(blob.cipher) as BufferSource);
     return JSON.parse(new TextDecoder().decode(plainBuf));
   } catch {
     return null; // wrong password, or data tampered with
