@@ -413,18 +413,20 @@ function ramp(value: number, low: number, high: number): number {
 export function probabilityFromSpeechMetrics(r: SpeechMetrics): number {
   // Each factor is scaled continuously across a realistic range (based on the speech-science
   // pause threshold and typical conversational pacing) rather than jumping at one cutoff, and
-  // pace is scored both for being too slow AND unnaturally fast/rushed, not just slow.
-  const silenceFactor = ramp(r.silenceRatio, 0.25, 0.7); // conversational speech is rarely >70% silence
-  const pauseFactor = ramp(r.pauseCount, 2, 14); // a couple of natural pauses is normal; many is not
-  const paceSlowFactor = ramp(90 - r.estWordsPerMin, 0, 60); // below ~90 WPM, the slower the more it counts
+  // pace is scored both for being too slow AND unnaturally fast/rushed, not just slow. Ranges
+  // are tuned tighter than a first pass so noticeably long pauses and heavy silence move the
+  // score sharply instead of needing extreme values to register.
+  const silenceFactor = ramp(r.silenceRatio, 0.12, 0.45); // conversational speech is rarely this silent
+  const pauseFactor = ramp(r.pauseCount, 1, 8); // even a handful of long (250ms+) pauses is a real signal
+  const paceSlowFactor = ramp(110 - r.estWordsPerMin, 0, 55); // dragging pace below ~110 WPM counts more
   const paceFastFactor = ramp(r.estWordsPerMin - 190, 0, 30); // above ~190 WPM, rushed/pressured speech
   const paceFactor = Math.max(paceSlowFactor, paceFastFactor);
   // Very low energy variability across the whole recording reads as flat/monotone delivery;
   // this only nudges the score, since quiet recording conditions can also cause it.
-  const flatnessFactor = r.avgVol > 0 ? ramp(0.02 - r.variability, 0, 0.02) : 0;
+  const flatnessFactor = r.avgVol > 0 ? ramp(0.025 - r.variability, 0, 0.025) : 0;
 
   const weighted =
-    0.1 + silenceFactor * 0.32 + pauseFactor * 0.24 + paceFactor * 0.22 + flatnessFactor * 0.12;
+    0.08 + silenceFactor * 0.38 + pauseFactor * 0.3 + paceFactor * 0.18 + flatnessFactor * 0.08;
   return clamp01(weighted);
 }
 
