@@ -20,6 +20,7 @@ import {
   levelFromXP,
   safeGet,
   safeSet,
+  userKey,
   getSeenAchievements,
   markAchievementsSeen,
   getGameBests,
@@ -204,10 +205,10 @@ export default function Dashboard() {
     setXp(getGameXP());
 
     const streak = computeStreak(h);
-    const lastCelebrated = parseInt(safeGet(STREAK_KEY) || "0", 10);
+    const lastCelebrated = parseInt(safeGet(userKey(STREAK_KEY)) || "0", 10);
     const justHit = STREAK_MILESTONES.filter((m) => streak >= m && lastCelebrated < m).sort((a, b) => b - a)[0];
     if (justHit) {
-      safeSet(STREAK_KEY, String(justHit));
+      safeSet(userKey(STREAK_KEY), String(justHit));
       setCelebrate(true);
       showToast(`🎉 ${justHit}-day streak achieved!`);
       showAward({ type: "streak", title: `${justHit}-day streak!`, subtitle: "You've used Verity every day - keep it going." });

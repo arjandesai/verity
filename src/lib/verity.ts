@@ -83,7 +83,7 @@ export function signOut() {
  *  Mango's affection, daily activity, and achievements are all per-account instead of shared
  *  by whichever browser they're viewed in. Falls back to a shared "guest" bucket for the rare
  *  case something reads/writes before a user is signed in. */
-function userKey(base: string): string {
+export function userKey(base: string): string {
   const u = getUser();
   const suffix = u ? u.username.toLowerCase() : "guest";
   return `${base}__${suffix}`;
@@ -1344,7 +1344,7 @@ export function updateGameBest(gameKey: string, value: number, higherIsBetter: b
    pops up exactly once, the moment each one is unlocked, rather than every dashboard visit ---------- */
 const LS_SEEN_ACHIEVEMENTS = "verity_seen_achievements_v3"; // bumped again so the interactive tilt cutscene replays for already-unlocked achievements
 export function getSeenAchievements(): string[] {
-  const raw = safeGet(LS_SEEN_ACHIEVEMENTS);
+  const raw = safeGet(userKey(LS_SEEN_ACHIEVEMENTS));
   if (!raw) return [];
   try {
     return JSON.parse(raw);
@@ -1355,5 +1355,5 @@ export function getSeenAchievements(): string[] {
 export function markAchievementsSeen(titles: string[]) {
   const seen = new Set(getSeenAchievements());
   titles.forEach((t) => seen.add(t));
-  safeSet(LS_SEEN_ACHIEVEMENTS, JSON.stringify(Array.from(seen)));
+  safeSet(userKey(LS_SEEN_ACHIEVEMENTS), JSON.stringify(Array.from(seen)));
 }
