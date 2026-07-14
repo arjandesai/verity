@@ -10,5 +10,21 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Paired with public/404.html: if a hard refresh on a client-side route bounced here via
+      // the 404 redirect, restore the actual path before React Router mounts, so the app lands
+      // on the right page instead of always resetting to home.
+      (function () {
+        var redirect = sessionStorage.getItem("verity-redirect-path");
+        if (redirect) {
+          sessionStorage.removeItem("verity-redirect-path");
+          var base = "/verity";
+          var path = redirect.startsWith(base) ? redirect.slice(base.length) : redirect;
+          if (path && path !== "/" && path !== location.pathname) {
+            history.replaceState(null, "", base + path);
+          }
+        }
+      })();
+    </script>
   </body>
 </html>
