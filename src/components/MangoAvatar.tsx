@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useEffect, useRef, useState } from "react";
-import { motion, useAnimation } from "framer-motion";
+import { motion, useAnimation, AnimatePresence } from "framer-motion";
 
 interface MangoAvatarProps {
   size?: number;
@@ -171,7 +171,7 @@ export function MangoAvatar({ size = 56, mouthOpen = true, className, onClick, h
       rotate: [0, -6, 5, -2, 0],
       transition: { duration: 0.45, ease: "easeOut" },
     });
-    setTimeout(() => setPoked(false), 220);
+    setTimeout(() => setPoked(false), 850);
     onClick?.();
   }
 
@@ -250,6 +250,34 @@ export function MangoAvatar({ size = 56, mouthOpen = true, className, onClick, h
         {renderOutfitFront(outfit)}
         {renderHat(hat)}
       </motion.g>
+
+      {/* a little burst of hearts when he's poked, so the reaction has a small payoff beyond the wobble */}
+      <AnimatePresence>
+        {poked && (
+          <>
+            {[
+              { dx: -10, delay: 0 },
+              { dx: 0, delay: 0.06 },
+              { dx: 10, delay: 0.03 },
+            ].map((h, i) => (
+              <motion.text
+                key={i}
+                x={49.8 + h.dx}
+                y={20}
+                fontSize={9}
+                textAnchor="middle"
+                fill="#ff6478"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: [0, 1, 1, 0], y: -6 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.8, delay: h.delay, ease: "easeOut" }}
+              >
+                ♥
+              </motion.text>
+            ))}
+          </>
+        )}
+      </AnimatePresence>
     </motion.svg>
   );
 }

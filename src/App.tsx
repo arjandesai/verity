@@ -30,7 +30,7 @@ function GlobalDock() {
   const isMobile = useIsMobile();
   if (isMobile) return null; // mobile uses the Nav's hamburger menu instead, to keep the screen uncluttered
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
+    <div className="verity-dock fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
       <Dock
         items={[
           { icon: HomeIcon, label: "Home", onClick: () => navigate("/"), active: location.pathname === "/" },

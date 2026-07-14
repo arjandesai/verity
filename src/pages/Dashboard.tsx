@@ -306,11 +306,20 @@ export default function Dashboard() {
     <div className="container" style={{ paddingTop: 56, paddingBottom: 120, maxWidth: 880 }}>
       {celebrate && <Confetti />}
       <RevealOnScroll>
-        <h1 style={{ fontSize: 30, fontWeight: 800, marginBottom: 6 }}>Your dashboard</h1>
-        <p className="text-text-soft" style={{ marginBottom: 30 }}>
-          {history.length} screening{history.length === 1 ? "" : "s"} logged
-          {streak > 0 && ` · ${streak}-day streak 🔥`}
-        </p>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+          <div>
+            <h1 style={{ fontSize: 30, fontWeight: 800, marginBottom: 6 }}>Your dashboard</h1>
+            <p className="text-text-soft" style={{ marginBottom: 30 }}>
+              {history.length} screening{history.length === 1 ? "" : "s"} logged
+              {streak > 0 && ` · ${streak}-day streak 🔥`}
+            </p>
+          </div>
+          {history.length > 0 && (
+            <button className="btn btn-secondary btn-sm no-print" onClick={() => window.print()}>
+              Print summary
+            </button>
+          )}
+        </div>
       </RevealOnScroll>
 
       {history.length > 0 && (
@@ -385,7 +394,7 @@ export default function Dashboard() {
       </RevealOnScroll>
 
       <RevealOnScroll delay={0.16}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
+        <div className="no-print" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
           <div style={{ display: "flex", gap: 8 }}>
             {(["all", "speech", "handwriting"] as ModalityFilter[]).map((f) => (
               <button key={f} className={`diff-btn ${filter === f ? "active" : ""}`} onClick={() => setFilter(f)}>

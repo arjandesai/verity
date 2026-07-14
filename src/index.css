@@ -107,3 +107,12 @@ a{color:inherit;text-decoration:none;}
 #back-to-top:hover{opacity:.82;}
 
 @keyframes confetti-fall{0%{transform:translateY(0) rotate(0);opacity:.9;}100%{transform:translateY(100vh) rotate(340deg);opacity:0;}}
+
+/* Printing the dashboard: hide chrome that doesn't make sense on paper (nav, floating dock,
+   footer, buttons, Mango/games widgets) and let the stats/history print cleanly in black and
+   white without the app's colored backgrounds fighting the printer. */
+@media print {
+  header, footer, #back-to-top, .verity-dock, .no-print { display: none !important; }
+  body, .container { background: #fff !important; color: #000 !important; }
+  .card { border: 1px solid #ccc !important; box-shadow: none !important; break-inside: avoid; }
+}
