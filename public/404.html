@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Verity</title>
+    <script>
+      // GitHub Pages serves this file for any URL it doesn't recognize as a real file - which
+      // includes every one of Verity's client-side routes (e.g. /verity/settings) on a hard
+      // refresh, since only index.html actually exists on the server. This stashes the path the
+      // visitor was trying to reach in sessionStorage, then bounces to index.html, which reads
+      // it back and hands it to React Router - so a refresh on any page lands where you expect
+      // instead of a dead end.
+      sessionStorage.setItem("verity-redirect-path", location.pathname + location.search + location.hash);
+      location.replace(location.origin + "/verity/");
+    </script>
+  </head>
+  <body></body>
+</html>
