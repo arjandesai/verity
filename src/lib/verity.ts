@@ -79,6 +79,16 @@ export function signOut() {
   safeRemove(LS_USER);
 }
 
+/** Namespaces a storage key to the currently signed-in account, so test history, coins, XP,
+ *  Mango's affection, daily activity, and achievements are all per-account instead of shared
+ *  by whichever browser they're viewed in. Falls back to a shared "guest" bucket for the rare
+ *  case something reads/writes before a user is signed in. */
+function userKey(base: string): string {
+  const u = getUser();
+  const suffix = u ? u.username.toLowerCase() : "guest";
+  return `${base}__${suffix}`;
+}
+
 /* ---------- accounts / auth ---------- */
 export interface EncryptedBlob {
   iv: string;
@@ -1024,14 +1034,14 @@ function todayKey(): string {
   return new Date().toISOString().slice(0, 10);
 }
 export function markDailyActivity(activity: DailyActivity) {
-  safeSet(`verity_daily_${activity}`, todayKey());
+  safeSet(userKey(`verity_daily_${activity}`), todayKey());
 }
 export function getDailyActivityStatus(): Record<DailyActivity, boolean> {
   const today = todayKey();
   return {
-    speech: safeGet("verity_daily_speech") === today,
-    handwriting: safeGet("verity_daily_handwriting") === today,
-    games: safeGet("verity_daily_games") === today,
+    speech: safeGet(userKey("verity_daily_speech")) === today,
+    handwriting: safeGet(userKey("verity_daily_handwriting")) === today,
+    games: safeGet(userKey("verity_daily_games")) === today,
   };
 }
 /** How many of the 3 daily activities are done today, in the order they were completed
@@ -1052,7 +1062,7 @@ export interface HistoryEntry {
   source?: string;
 }
 export function getHistory(): HistoryEntry[] {
-  const raw = safeGet(LS_HISTORY);
+  const raw = safeGet(userKey(LS_HISTORY));
   if (!raw) return [];
   try {
     return JSON.parse(raw);
@@ -1064,11 +1074,11 @@ export function addHistoryEntry(entry: Omit<HistoryEntry, "id" | "timestamp">): 
   const full: HistoryEntry = { ...entry, id: Math.random().toString(36).slice(2), timestamp: Date.now() };
   const history = getHistory();
   history.push(full);
-  safeSet(LS_HISTORY, JSON.stringify(history));
+  safeSet(userKey(LS_HISTORY), JSON.stringify(history));
   return full;
 }
 export function clearHistory() {
-  safeRemove(LS_HISTORY);
+  safeRemove(userKey(LS_HISTORY));
 }
 export function historyToCsv(history: HistoryEntry[]): string {
   const rows = [["timestamp", "date", "modality", "probability", "band"]];
@@ -1092,11 +1102,11 @@ export function computeTrend(history: HistoryEntry[]): { direction: "up" | "down
 
 /* ---------- games XP / leveling ---------- */
 export function getGameXP(): number {
-  const v = parseInt(safeGet(LS_GAME_XP) || "0", 10);
+  const v = parseInt(safeGet(userKey(LS_GAME_XP)) || "0", 10);
   return isNaN(v) ? 0 : v;
 }
 export function setGameXP(v: number) {
-  safeSet(LS_GAME_XP, String(Math.max(0, Math.round(v))));
+  safeSet(userKey(LS_GAME_XP), String(Math.max(0, Math.round(v))));
 }
 export function xpNeededForLevel(level: number): number {
   // Steeper curve than before, so leveling up (and the Mango coin bonus that comes with it)
@@ -1125,24 +1135,24 @@ export function shuffle<T>(arr: T[]): T[] {
 
 /* ---------- Mango relationship (a little tamagotchi-style bond) ---------- */
 export function getMangoAffection(): number {
-  const v = parseInt(safeGet(LS_MANGO_AFFECTION) || "0", 10);
+  const v = parseInt(safeGet(userKey(LS_MANGO_AFFECTION)) || "0", 10);
   return isNaN(v) ? 0 : v;
 }
 export function addMangoAffection(amount: number): number {
   const next = Math.max(0, getMangoAffection() + amount);
-  safeSet(LS_MANGO_AFFECTION, String(next));
+  safeSet(userKey(LS_MANGO_AFFECTION), String(next));
   return next;
 }
 
 const LS_MANGO_PET_COUNT = "verity_mango_pet_count";
 export function getMangoPetCount(): number {
-  const v = parseInt(safeGet(LS_MANGO_PET_COUNT) || "0", 10);
+  const v = parseInt(safeGet(userKey(LS_MANGO_PET_COUNT)) || "0", 10);
   return isNaN(v) ? 0 : v;
 }
 /** Increments the lifetime pet counter; returns the new total. */
 export function incrementMangoPetCount(): number {
   const next = getMangoPetCount() + 1;
-  safeSet(LS_MANGO_PET_COUNT, String(next));
+  safeSet(userKey(LS_MANGO_PET_COUNT), String(next));
   return next;
 }
 export interface MangoStage {
@@ -1163,18 +1173,18 @@ export function mangoStageFor(affection: number): MangoStage {
 /* ---------- Mango coins (earned from achievements and leveling up, spent in the shop) ---------- */
 const LS_MANGO_COINS = "verity_mango_coins";
 export function getMangoCoins(): number {
-  const v = parseInt(safeGet(LS_MANGO_COINS) || "0", 10);
+  const v = parseInt(safeGet(userKey(LS_MANGO_COINS)) || "0", 10);
   return isNaN(v) ? 0 : v;
 }
 export function addMangoCoins(amount: number): number {
   const next = Math.max(0, getMangoCoins() + amount);
-  safeSet(LS_MANGO_COINS, String(next));
+  safeSet(userKey(LS_MANGO_COINS), String(next));
   return next;
 }
 export function spendMangoCoins(amount: number): boolean {
   const bal = getMangoCoins();
   if (bal < amount) return false;
-  safeSet(LS_MANGO_COINS, String(bal - amount));
+  safeSet(userKey(LS_MANGO_COINS), String(bal - amount));
   return true;
 }
 
@@ -1223,7 +1233,7 @@ const LS_MANGO_INVENTORY = "verity_mango_inventory";
 const LS_MANGO_EQUIPPED = "verity_mango_equipped";
 
 export function getMangoInventory(): string[] {
-  const raw = safeGet(LS_MANGO_INVENTORY);
+  const raw = safeGet(userKey(LS_MANGO_INVENTORY));
   if (!raw) return [];
   try {
     return JSON.parse(raw);
@@ -1240,12 +1250,12 @@ export function purchaseMangoItem(itemId: string): boolean {
   const owned = getMangoInventory();
   if (owned.includes(itemId)) return false;
   if (!spendMangoCoins(item.price)) return false;
-  safeSet(LS_MANGO_INVENTORY, JSON.stringify([...owned, itemId]));
+  safeSet(userKey(LS_MANGO_INVENTORY), JSON.stringify([...owned, itemId]));
   return true;
 }
 
 export function getMangoEquipped(): Partial<Record<MangoSlot, string>> {
-  const raw = safeGet(LS_MANGO_EQUIPPED);
+  const raw = safeGet(userKey(LS_MANGO_EQUIPPED));
   if (!raw) return {};
   try {
     return JSON.parse(raw);
@@ -1263,7 +1273,7 @@ export function equipMangoItem(slot: MangoSlot, itemId: string | null) {
     if (!getMangoInventory().includes(itemId)) return;
     equipped[slot] = itemId;
   }
-  safeSet(LS_MANGO_EQUIPPED, JSON.stringify(equipped));
+  safeSet(userKey(LS_MANGO_EQUIPPED), JSON.stringify(equipped));
 }
 
 /* ---------- secret platinum trophy: a hidden, multi-step sequence hunted across the site ---------- */
@@ -1273,7 +1283,7 @@ export type SecretStepId = (typeof SECRET_STEPS)[number];
 const LS_SECRET_STEPS = "verity_secret_steps";
 
 export function getSecretSteps(): SecretStepId[] {
-  const raw = safeGet(LS_SECRET_STEPS);
+  const raw = safeGet(userKey(LS_SECRET_STEPS));
   if (!raw) return [];
   try {
     return JSON.parse(raw);
@@ -1288,7 +1298,7 @@ export function markSecretStep(step: SecretStepId): boolean {
   const steps = new Set(getSecretSteps());
   const alreadyHadAll = SECRET_STEPS.every((s) => steps.has(s));
   steps.add(step);
-  safeSet(LS_SECRET_STEPS, JSON.stringify(Array.from(steps)));
+  safeSet(userKey(LS_SECRET_STEPS), JSON.stringify(Array.from(steps)));
   const hasAllNow = SECRET_STEPS.every((s) => steps.has(s));
   return hasAllNow && !alreadyHadAll;
 }
