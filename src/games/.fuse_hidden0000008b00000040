@@ -1,0 +1,107 @@
+import * as React from "react";
+import { useEffect, useState } from "react";
+import { updateGameBest } from "@/lib/verity";
+import type { Difficulty } from "@/components/LevelBar";
+
+const LENGTH: Record<Difficulty, number> = { Easy: 4, Medium: 5, Hard: 6, Extreme: 8 };
+const SHOW_MS: Record<Difficulty, number> = { Easy: 3500, Medium: 3000, Hard: 2600, Extreme: 2200 };
+
+function randomDigits(length: number): string {
+  let s = "";
+  for (let i = 0; i < length; i++) s += Math.floor(Math.random() * 10);
+  return s;
+}
+
+type Phase = "showing" | "input" | "correct" | "incorrect";
+
+export function NumberRecall({ difficulty, onWin }: { difficulty: Difficulty; onWin: (isNewBest?: boolean) => void }) {
+  const [target, setTarget] = useState(() => randomDigits(LENGTH[difficulty]));
+  const [phase, setPhase] = useState<Phase>("showing");
+  const [input, setInput] = useState("");
+  const [isNewBest, setIsNewBest] = useState(false);
+
+  useEffect(() => {
+    reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [difficulty]);
+
+  useEffect(() => {
+    if (phase !== "showing") return;
+    const t = setTimeout(() => setPhase("input"), SHOW_MS[difficulty]);
+    return () => clearTimeout(t);
+  }, [phase, difficulty]);
+
+  function reset() {
+    setTarget(randomDigits(LENGTH[difficulty]));
+    setInput("");
+    setPhase("showing");
+    setIsNewBest(false);
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (phase !== "input") return;
+    if (input.trim() === target) {
+      setPhase("correct");
+      const best = updateGameBest("number", target.length, true);
+      setIsNewBest(best);
+      onWin(best);
+    } else {
+      setPhase("incorrect");
+    }
+  }
+
+  return (
+    <div style={{ textAlign: "center" }}>
+      {phase === "showing" && (
+        <div>
+          <p className="text-text-soft" style={{ marginBottom: 16, fontSize: 13.5 }}>Memorize this number:</p>
+          <div style={{ fontSize: 40, fontWeight: 800, letterSpacing: 6 }}>{target}</div>
+        </div>
+      )}
+
+      {(phase === "input" || phase === "incorrect") && (
+        <form onSubmit={handleSubmit}>
+          <p className="text-text-soft" style={{ marginBottom: 16, fontSize: 13.5 }}>Now type the number you saw:</p>
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value.replace(/\D/g, ""))}
+            autoFocus
+            style={{
+              width: "100%",
+              maxWidth: 280,
+              textAlign: "center",
+              fontSize: 26,
+              letterSpacing: 6,
+              padding: "12px 14px",
+              borderRadius: 10,
+              border: "1px solid var(--border)",
+              background: "var(--bg)",
+              color: "var(--text)",
+              marginBottom: 16,
+            }}
+          />
+          <div>
+            <button className="btn btn-primary" type="submit">
+              Submit
+            </button>
+          </div>
+          {phase === "incorrect" && (
+            <p style={{ marginTop: 14, fontWeight: 700 }}>
+              Not quite - it was <strong>{target}</strong>.
+            </p>
+          )}
+        </form>
+      )}
+
+      {(phase === "correct" || phase === "incorrect") && (
+        <div style={{ marginTop: 20 }}>
+          {phase === "correct" && <p style={{ fontWeight: 700, marginBottom: 10 }}>Correct! 🎉</p>}
+          <button className="btn btn-secondary" onClick={reset}>
+            {phase === "correct" ? "Play again" : "Try again"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}

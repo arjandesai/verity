@@ -1,0 +1,124 @@
+import * as React from "react";
+import { useEffect, useRef, useState } from "react";
+import { updateGameBest } from "@/lib/verity";
+import type { Difficulty } from "@/components/LevelBar";
+
+const ROUNDS = 3;
+// Longer minimum wait at harder difficulties, so there's more suspense before the target appears.
+const WAIT_RANGE: Record<Difficulty, [number, number]> = {
+  Easy: [1000, 2200],
+  Medium: [1200, 2800],
+  Hard: [1500, 3400],
+  Extreme: [1800, 4200],
+};
+
+type Phase = "idle" | "waiting" | "ready" | "tooSoon" | "result";
+
+export function ReactionTime({ difficulty, onWin }: { difficulty: Difficulty; onWin: (isNewBest?: boolean) => void }) {
+  const [phase, setPhase] = useState<Phase>("idle");
+  const [round, setRound] = useState(0);
+  const [times, setTimes] = useState<number[]>([]);
+  const [done, setDone] = useState(false);
+  const [isNewBest, setIsNewBest] = useState(false);
+  const timeoutRef = useRef<number>(0);
+  const readyAtRef = useRef(0);
+
+  useEffect(() => () => clearTimeout(timeoutRef.current), []);
+
+  function startRound() {
+    setPhase("waiting");
+    const [min, max] = WAIT_RANGE[difficulty];
+    const wait = min + Math.random() * (max - min);
+    timeoutRef.current = window.setTimeout(() => {
+      readyAtRef.current = Date.now();
+      setPhase("ready");
+    }, wait);
+  }
+
+  function handleTap() {
+    if (phase === "idle" || phase === "result") {
+      startRound();
+      return;
+    }
+    if (phase === "waiting") {
+      clearTimeout(timeoutRef.current);
+      setPhase("tooSoon");
+      return;
+    }
+    if (phase === "ready") {
+      const reaction = Date.now() - readyAtRef.current;
+      const nextTimes = [...times, reaction];
+      setTimes(nextTimes);
+      if (nextTimes.length >= ROUNDS) {
+        const avgMs = Math.round(nextTimes.reduce((a, b) => a + b, 0) / nextTimes.length);
+        setDone(true);
+        setPhase("result");
+        setIsNewBest(updateGameBest("reaction", avgMs, false));
+        onWin();
+      } else {
+        setRound((r) => r + 1);
+        setPhase("result");
+      }
+    }
+  }
+
+  function reset() {
+    clearTimeout(timeoutRef.current);
+    setPhase("idle");
+    setRound(0);
+    setTimes([]);
+    setDone(false);
+    setIsNewBest(false);
+  }
+
+  const avg = times.length ? Math.round(times.reduce((a, b) => a + b, 0) / times.length) : 0;
+
+  return (
+    <div style={{ textAlign: "center" }}>
+      <p className="text-text-soft" style={{ marginBottom: 14, fontSize: 13.5 }}>
+        Round {Math.min(round + 1, ROUNDS)}/{ROUNDS} — tap the box the moment it turns dark. Tap too early and you'll have to redo the round.
+      </p>
+      <button
+        onClick={handleTap}
+        style={{
+          width: "100%",
+          maxWidth: 360,
+          height: 180,
+          margin: "0 auto",
+          display: "block",
+          borderRadius: 16,
+          border: "none",
+          cursor: "pointer",
+          fontSize: 18,
+          fontWeight: 700,
+          color: "var(--bg)",
+          background:
+            phase === "ready"
+              ? "var(--blue-deep)"
+              : phase === "tooSoon"
+              ? "var(--text-soft)"
+              : "var(--border)",
+          transition: "background .15s ease",
+        }}
+      >
+        {phase === "idle" && "Tap to start"}
+        {phase === "waiting" && "Wait for it…"}
+        {phase === "ready" && "Tap now!"}
+        {phase === "tooSoon" && "Too soon — tap to retry"}
+        {phase === "result" && !done && `${times[times.length - 1]}ms — tap for next round`}
+        {phase === "result" && done && `All done! Average: ${avg}ms`}
+      </button>
+
+      {done && (
+        <div style={{ marginTop: 20 }}>
+          <p style={{ fontWeight: 700, marginBottom: 10 }}>
+            Nice work — {ROUNDS} rounds complete! 🎉 {isNewBest && "New personal best!"}
+          </p>
+          <button className="btn btn-primary" onClick={reset}>
+            Play again
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
