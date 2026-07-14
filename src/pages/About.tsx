@@ -88,8 +88,8 @@ export default function About() {
           </p>
           <div style={{ display: "flex", justifyContent: "center" }}>
             <ImageComparison
-              beforeImage="/brain-before.svg"
-              afterImage="/brain-after.svg"
+              beforeImage={`${import.meta.env.BASE_URL}brain-before.svg`}
+              afterImage={`${import.meta.env.BASE_URL}brain-after.svg`}
               altBefore="Illustration of a brain with sparse, dim neural connections, representing a less mentally active routine"
               altAfter="Illustration of a brain with dense, bright neural connections, representing regular mental engagement"
               beforeLabel="Less active routine"

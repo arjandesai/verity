@@ -54,7 +54,7 @@ export default function Home() {
         }}
       >
         <img
-          src="/hero-bg.svg"
+          src={`${import.meta.env.BASE_URL}hero-bg.svg`}
           alt=""
           style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
         />
