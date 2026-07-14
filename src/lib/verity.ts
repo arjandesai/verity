@@ -402,8 +402,30 @@ export function computeSpeechMetrics(samples: number[], durationSec: number): Sp
 
   return { durationSec, speakingRatio, silenceRatio, estWordsPerMin, pauseCount, avgVol: mean, variability };
 }
+/** Maps a value to a smooth 0-1 ramp between [low, high] instead of a hard cutoff, so
+ *  being slightly past a threshold barely moves the score and being far past it moves it
+ *  a lot - closer to how these measures actually behave, rather than a step function that
+ *  treats "4.1 pauses" the same as "40 pauses". */
+function ramp(value: number, low: number, high: number): number {
+  if (high === low) return value >= high ? 1 : 0;
+  return clamp01((value - low) / (high - low));
+}
 export function probabilityFromSpeechMetrics(r: SpeechMetrics): number {
-  return clamp01(0.15 + r.silenceRatio * 0.35 + (r.pauseCount > 4 ? 0.15 : 0) + (r.estWordsPerMin < 90 ? 0.15 : 0));
+  // Each factor is scaled continuously across a realistic range (based on the speech-science
+  // pause threshold and typical conversational pacing) rather than jumping at one cutoff, and
+  // pace is scored both for being too slow AND unnaturally fast/rushed, not just slow.
+  const silenceFactor = ramp(r.silenceRatio, 0.25, 0.7); // conversational speech is rarely >70% silence
+  const pauseFactor = ramp(r.pauseCount, 2, 14); // a couple of natural pauses is normal; many is not
+  const paceSlowFactor = ramp(90 - r.estWordsPerMin, 0, 60); // below ~90 WPM, the slower the more it counts
+  const paceFastFactor = ramp(r.estWordsPerMin - 190, 0, 30); // above ~190 WPM, rushed/pressured speech
+  const paceFactor = Math.max(paceSlowFactor, paceFastFactor);
+  // Very low energy variability across the whole recording reads as flat/monotone delivery;
+  // this only nudges the score, since quiet recording conditions can also cause it.
+  const flatnessFactor = r.avgVol > 0 ? ramp(0.02 - r.variability, 0, 0.02) : 0;
+
+  const weighted =
+    0.1 + silenceFactor * 0.32 + pauseFactor * 0.24 + paceFactor * 0.22 + flatnessFactor * 0.12;
+  return clamp01(weighted);
 }
 
 /** Turns a decoded audio file into the same per-window RMS "samples" array that live
@@ -473,9 +495,20 @@ export function computeHandwritingMetrics(points: HandwritingPoint[], strokes: H
   };
 }
 export function probabilityFromHandwriting(r: HandwritingMetrics): number {
-  // No longer adds a bonus just for using a mouse instead of a touchscreen  - 
-  // the score depends only on measured writing behavior.
-  return clamp01(0.15 + (r.pauseCount > 4 ? 0.2 : 0) + (r.speedVariability > 250 ? 0.15 : 0) + (r.strokeCount > 25 ? 0.1 : 0));
+  // No longer adds a bonus just for using a mouse instead of a touchscreen  -
+  // the score depends only on measured writing behavior. Each factor now scales
+  // continuously with how far past a normal range it is, instead of a flat bonus the
+  // instant a single hard-coded cutoff is crossed.
+  const pauseFactor = ramp(r.pauseCount, 2, 12); // a couple of hesitations is normal; many is not
+  const jitterFactor = ramp(r.speedVariability, 120, 400); // erratic, uneven pen speed
+  const fragmentFactor = ramp(r.strokeCount, 15, 40); // writing broken into many small strokes
+  // Extremely slow, deliberate pen movement (not just "not fast") is itself a signal, scored
+  // separately from speed variability so a slow-but-steady writer isn't penalized twice.
+  const slownessFactor = r.avgSpeed > 0 ? ramp(60 - r.avgSpeed, 0, 50) : 0;
+
+  const weighted =
+    0.1 + pauseFactor * 0.28 + jitterFactor * 0.26 + fragmentFactor * 0.18 + slownessFactor * 0.14;
+  return clamp01(weighted);
 }
 
 /** Result of a fast, offline sanity check on a drawn sentence: does the ink actually look like it
