@@ -13,7 +13,7 @@ import { AnimatedCarousel } from "@/components/ui/logo-carousel";
 import ClippedVideoTab from "@/components/ui/clipped-video-tab";
 import Testimonials from "@/components/ui/testimonial-v2";
 import { BouncyCardsFeatures } from "@/components/ui/bounce-card-features";
-import InteractiveHeroBg from "@/components/ui/interactive-hero-bg";
+import { InteractiveDots } from "@/components/ui/interactive-dots-1";
 import HeroBrain from "@/components/ui/hero-brain";
 
 const TECH_LOGOS = [
@@ -55,7 +55,8 @@ export default function Home() {
           background: "#0a0a0a",
         }}
       >
-        <InteractiveHeroBg />
+        <div style={{ position: "absolute", inset: 0, background: "#0a0a0a" }} />
+        <InteractiveDots dotColor="#3d6bd6" dotSize={2.5} spacing={38} repelRadius={120} />
         <HeroBrain />
         <div
           style={{
