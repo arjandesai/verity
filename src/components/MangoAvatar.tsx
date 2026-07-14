@@ -237,11 +237,10 @@ export function MangoAvatar({ size = 56, mouthOpen = true, className, onClick, h
           </>
         )}
 
-        {/* mouth - a rounded dark opening with a couple of teeth and a little tongue */}
+        {/* mouth - a rounded dark opening with a little tongue */}
         {mouthOpen ? (
           <>
             <rect x="44.9" y="52.7" width="9.8" height="9.8" rx="2.9" fill="#3c1e46" />
-            <rect x="47.9" y="52.7" width="2.9" height="2.9" fill="#fff" />
             <ellipse cx="49.8" cy="60" rx="2" ry="1.5" fill="#ff8282" />
           </>
         ) : (
