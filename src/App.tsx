@@ -28,6 +28,9 @@ import Resources from "@/pages/Resources";
 import FAQ from "@/pages/FAQ";
 import Breathe from "@/pages/Breathe";
 import Glossary from "@/pages/Glossary";
+import ResultDetail from "@/pages/ResultDetail";
+import Compare from "@/pages/Compare";
+import DailyChallenge from "@/pages/DailyChallenge";
 import { getTextScale, applyTextScale, getThemeId, applyColorTheme, getAccessibilityPrefs, applyAccessibilityPrefs } from "@/lib/verity";
 
 function GlobalDock() {
@@ -80,6 +83,9 @@ export default function App() {
               <Route path="/faq" element={<FAQ />} />
               <Route path="/breathe" element={<Breathe />} />
               <Route path="/glossary" element={<Glossary />} />
+              <Route path="/result/:id" element={<ResultDetail />} />
+              <Route path="/compare" element={<Compare />} />
+              <Route path="/challenge" element={<DailyChallenge />} />
             </Routes>
           </main>
           <CinematicFooter />

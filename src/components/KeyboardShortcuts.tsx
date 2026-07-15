@@ -16,6 +16,8 @@ const SHORTCUTS: Shortcut[] = [
   { keys: ["g", "w"], label: "Go to Handwriting test", to: "/handwriting" },
   { keys: ["g", "g"], label: "Go to Games", to: "/games" },
   { keys: ["g", "d"], label: "Go to Dashboard", to: "/dashboard" },
+  { keys: ["g", "c"], label: "Go to Compare", to: "/compare" },
+  { keys: ["g", "y"], label: "Go to Daily challenge", to: "/challenge" },
   { keys: ["g", "j"], label: "Go to Journal", to: "/journal" },
   { keys: ["g", "p"], label: "Go to Mango", to: "/pet" },
   { keys: ["g", "b"], label: "Go to Breathe", to: "/breathe" },

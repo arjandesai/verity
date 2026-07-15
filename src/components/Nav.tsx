@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { Menu, X, ChevronDown, Mic, PenLine, Gamepad2, ClipboardList, LineChart, Info, ShieldCheck, PawPrint, Settings as SettingsIcon, Coins, HeartHandshake, Wind, BookMarked } from "lucide-react";
+import { Menu, X, ChevronDown, Mic, PenLine, Gamepad2, ClipboardList, LineChart, Info, ShieldCheck, PawPrint, Settings as SettingsIcon, Coins, HeartHandshake, Wind, BookMarked, GitCompare, Sparkles } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ThemeToggle } from "./ui/theme-toggle";
 import { LogoMark } from "./LogoMark";
@@ -30,10 +30,12 @@ const MENU: MenuEntry[] = [
       { title: "All tests", description: "See every screening tool in one place.", icon: <ClipboardList className="size-5 shrink-0" />, to: "/tests" },
       { title: "Speech test", description: "Record a short reading sample for analysis.", icon: <Mic className="size-5 shrink-0" />, to: "/speech" },
       { title: "Handwriting test", description: "Write or upload a sample to check steadiness.", icon: <PenLine className="size-5 shrink-0" />, to: "/handwriting" },
-      { title: "Brain-training games", description: "Nine games with levels and difficulty tiers.", icon: <Gamepad2 className="size-5 shrink-0" />, to: "/games" },
+      { title: "Brain-training games", description: "Ten games with levels and difficulty tiers.", icon: <Gamepad2 className="size-5 shrink-0" />, to: "/games" },
+      { title: "Daily challenge", description: "One small puzzle a day, no difficulty picker needed.", icon: <Sparkles className="size-5 shrink-0" />, to: "/challenge" },
     ],
   },
   { label: "Dashboard", to: "/dashboard" },
+  { label: "Compare", to: "/compare" },
   { label: "Journal", to: "/journal" },
   { label: "Mango", to: "/pet" },
   {
@@ -61,7 +63,9 @@ const MOBILE_LINKS = [
   { to: "/speech", label: "Speech test" },
   { to: "/handwriting", label: "Handwriting test" },
   { to: "/games", label: "Games" },
+  { to: "/challenge", label: "Daily challenge" },
   { to: "/dashboard", label: "Dashboard" },
+  { to: "/compare", label: "Compare" },
   { to: "/journal", label: "Journal" },
   { to: "/pet", label: "Mango (pet)" },
   { to: "/breathe", label: "Breathe" },

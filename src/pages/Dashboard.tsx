@@ -509,7 +509,12 @@ export default function Dashboard() {
         ) : (
           <div className="flex flex-col gap-3">
             {[...filtered].reverse().map((h) => (
-              <div key={h.id} className="card" style={{ padding: 16, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+              <Link
+                to={`/result/${h.id}`}
+                key={h.id}
+                className="card"
+                style={{ padding: 16, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10, color: "inherit" }}
+              >
                 <div>
                   <div style={{ fontWeight: 700, fontSize: 14.5, textTransform: "capitalize" }}>{h.modality}</div>
                   <div style={{ fontSize: 12.5, color: "var(--text-soft)" }}>{new Date(h.timestamp).toLocaleString()}</div>
@@ -518,7 +523,7 @@ export default function Dashboard() {
                   <div style={{ fontWeight: 800, fontSize: 18, color: bandColor(h.band) }}>{Math.round(h.probability * 100)}%</div>
                   <div style={{ fontSize: 12, color: "var(--text-soft)" }}>{bandLabel(h.band)}</div>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         )}
