@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { Menu, X, ChevronDown, Mic, PenLine, Gamepad2, ClipboardList, LineChart, Info, ShieldCheck, PawPrint, Settings as SettingsIcon, Coins, HeartHandshake } from "lucide-react";
+import { Menu, X, ChevronDown, Mic, PenLine, Gamepad2, ClipboardList, LineChart, Info, ShieldCheck, PawPrint, Settings as SettingsIcon, Coins, HeartHandshake, Wind, BookMarked } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ThemeToggle } from "./ui/theme-toggle";
 import { LogoMark } from "./LogoMark";
@@ -37,10 +37,17 @@ const MENU: MenuEntry[] = [
   { label: "Journal", to: "/journal" },
   { label: "Mango", to: "/pet" },
   {
+    label: "Wellbeing",
+    items: [
+      { title: "Breathe", description: "A short guided breathing exercise.", icon: <Wind className="size-5 shrink-0" />, to: "/breathe" },
+      { title: "Resources", description: "Helplines, caregiving guidance, and how to talk to a doctor.", icon: <HeartHandshake className="size-5 shrink-0" />, to: "/resources" },
+    ],
+  },
+  {
     label: "About",
     items: [
       { title: "About Verity", description: "What Verity is and how it works.", icon: <Info className="size-5 shrink-0" />, to: "/about" },
-      { title: "Resources", description: "Helplines, caregiving guidance, and how to talk to a doctor.", icon: <HeartHandshake className="size-5 shrink-0" />, to: "/resources" },
+      { title: "Glossary", description: "Plain-language definitions of terms used across the site.", icon: <BookMarked className="size-5 shrink-0" />, to: "/glossary" },
       { title: "FAQ", description: "Answers to the most common questions about Verity.", icon: <Info className="size-5 shrink-0" />, to: "/faq" },
       { title: "Privacy & Terms", description: "How your data is handled, and the terms of use.", icon: <ShieldCheck className="size-5 shrink-0" />, to: "/legal" },
     ],
@@ -57,8 +64,10 @@ const MOBILE_LINKS = [
   { to: "/dashboard", label: "Dashboard" },
   { to: "/journal", label: "Journal" },
   { to: "/pet", label: "Mango (pet)" },
+  { to: "/breathe", label: "Breathe" },
   { to: "/about", label: "About" },
   { to: "/resources", label: "Resources" },
+  { to: "/glossary", label: "Glossary" },
   { to: "/faq", label: "FAQ" },
   { to: "/legal", label: "Privacy & Terms" },
   { to: "/settings", label: "Settings" },

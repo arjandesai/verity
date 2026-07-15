@@ -25,6 +25,8 @@ import Settings from "@/pages/Settings";
 import Journal from "@/pages/Journal";
 import Resources from "@/pages/Resources";
 import FAQ from "@/pages/FAQ";
+import Breathe from "@/pages/Breathe";
+import Glossary from "@/pages/Glossary";
 import { getTextScale, applyTextScale, getThemeId, applyColorTheme, getAccessibilityPrefs, applyAccessibilityPrefs } from "@/lib/verity";
 
 function GlobalDock() {
@@ -75,6 +77,8 @@ export default function App() {
               <Route path="/journal" element={<Journal />} />
               <Route path="/resources" element={<Resources />} />
               <Route path="/faq" element={<FAQ />} />
+              <Route path="/breathe" element={<Breathe />} />
+              <Route path="/glossary" element={<Glossary />} />
             </Routes>
           </main>
           <CinematicFooter />

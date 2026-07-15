@@ -71,6 +71,7 @@ const GAME_LABELS: Record<string, string> = {
   stroop: "Color Match",
   oddoneout: "Odd One Out",
   category: "Category Sort",
+  trail: "Trail Making",
 };
 
 function tierFor(rank: number, total: number): AwardTier {
@@ -166,10 +167,10 @@ function achievementsFor(
   );
 
   const gamesExplored = ladder(
-    [1, 2, 3, 4, 5, 6, 7, 8, 9],
+    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
     gamesPlayed,
-    (n) => (n === 9 ? "Game master" : `Tried ${n} game${n === 1 ? "" : "s"}`),
-    (n) => (n === 9 ? "Play all nine brain-training games at least once" : `Play ${n} different brain-training game${n === 1 ? "" : "s"}`)
+    (n) => (n === 10 ? "Game master" : `Tried ${n} game${n === 1 ? "" : "s"}`),
+    (n) => (n === 10 ? "Play all ten brain-training games at least once" : `Play ${n} different brain-training game${n === 1 ? "" : "s"}`)
   );
 
   const perGameBests: Achievement[] = Object.keys(GAME_LABELS).map((key) => ({

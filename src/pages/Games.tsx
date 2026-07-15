@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useEffect, useState } from "react";
-import { Grid3x3, Repeat, MessageCircle, Zap, Hash, Calculator, Palette, Search, Tags } from "lucide-react";
+import { Grid3x3, Repeat, MessageCircle, Zap, Hash, Calculator, Palette, Search, Tags, Waypoints } from "lucide-react";
 import { RevealOnScroll } from "@/components/RevealOnScroll";
 import { LevelBar, DifficultySelector, DIFF_XP_MULT, type Difficulty } from "@/components/LevelBar";
 import { Confetti } from "@/components/Confetti";
@@ -16,9 +16,10 @@ import { MathSprint } from "@/games/MathSprint";
 import { StroopMatch } from "@/games/StroopMatch";
 import { OddOneOut } from "@/games/OddOneOut";
 import { CategorySort } from "@/games/CategorySort";
+import { TrailMaking } from "@/games/TrailMaking";
 import { Leaderboard } from "@/components/Leaderboard";
 
-type GameKey = "memory" | "sequence" | "word" | "reaction" | "number" | "math" | "stroop" | "oddoneout" | "category";
+type GameKey = "memory" | "sequence" | "word" | "reaction" | "number" | "math" | "stroop" | "oddoneout" | "category" | "trail";
 
 const GAMES: { key: GameKey; title: string; desc: string; icon: typeof Grid3x3 }[] = [
   { key: "memory", title: "Memory Match", desc: "Flip cards to find every matching pair.", icon: Grid3x3 },
@@ -30,6 +31,7 @@ const GAMES: { key: GameKey; title: string; desc: string; icon: typeof Grid3x3 }
   { key: "stroop", title: "Color Match", desc: "Name the ink color, not the word - a classic focus test.", icon: Palette },
   { key: "oddoneout", title: "Odd One Out", desc: "Spot the one item that's different from the rest.", icon: Search },
   { key: "category", title: "Category Sort", desc: "Sort each word into the right category, quickly.", icon: Tags },
+  { key: "trail", title: "Trail Making", desc: "A real clinical test: connect 1-A-2-B-3-C... in order, as fast as you can.", icon: Waypoints },
 ];
 
 export default function Games() {
@@ -130,6 +132,7 @@ export default function Games() {
           {active === "stroop" && <StroopMatch difficulty={difficulty} onWin={(best) => awardXP(30, best, "Color Match")} />}
           {active === "oddoneout" && <OddOneOut difficulty={difficulty} onWin={(best) => awardXP(25, best, "Odd One Out")} />}
           {active === "category" && <CategorySort difficulty={difficulty} onWin={(best) => awardXP(25, best, "Category Sort")} />}
+          {active === "trail" && <TrailMaking difficulty={difficulty} onWin={(best) => awardXP(35, best, "Trail Making")} />}
         </div>
       )}
 
