@@ -109,20 +109,27 @@ function renderHat(hat?: string | null) {
   }
 }
 
-/** Verity's mascot: a small, soft blob creature that gently bobs up and down and blinks every
- *  few seconds, on top of the original poke/mouse-tracking behavior. Body proportions and the
- *  pink-to-yellow-green gradient are ported directly from an original procedural drawing
- *  (each shape's position/size converted from its source 512x512 canvas into this SVG's
- *  coordinate space) rather than traced from any illustration. */
+/** Verity's mascot. The body shape, gradient, eye/pupil layout, mouth shape, breathing
+ *  animation, drag-squash, and click-hearts are ported directly and faithfully from a
+ *  user-supplied reference build (a small standalone HTML/CSS/JS blob character) - the same
+ *  proportions, colors, and interactions, just translated into this SVG's coordinate space so
+ *  it can be reused as a React component with the existing hat/outfit/recolor system layered
+ *  on top. */
 export function MangoAvatar({ size = 56, mouthOpen = true, className, onClick, hat, outfit, colors, gradientId = "mangoBody" }: MangoAvatarProps) {
-  const [c1, c2, c3] = colors || ["#ff7882", "#ebaa5a", "#d7dc32"];
+  const [c1, , c3] = colors || ["#ff8d96", "#ffaa76", "#ffc857"];
   const rootRef = useRef<SVGSVGElement>(null);
   const rafRef = useRef<number | null>(null);
   const [pupil, setPupil] = useState({ x: 0, y: 0 });
   const [poked, setPoked] = useState(false);
+  const [showHearts, setShowHearts] = useState(false);
+  const [heartsBurst, setHeartsBurst] = useState(0);
   const [blinking, setBlinking] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const dragStart = useRef({ x: 0, y: 0 });
   const controls = useAnimation();
 
+  // Pupils track the cursor anywhere on the page, clamped to a small radius within the eye -
+  // same relative reach (~38% of the eye's radius) as the reference build.
   useEffect(() => {
     function handleMove(e: MouseEvent) {
       if (rafRef.current != null) return;
@@ -136,7 +143,7 @@ export function MangoAvatar({ size = 56, mouthOpen = true, className, onClick, h
         const dx = e.clientX - cx;
         const dy = e.clientY - cy;
         const dist = Math.hypot(dx, dy) || 1;
-        const maxOffset = 3;
+        const maxOffset = 2.1;
         const reach = Math.min(1, dist / 140);
         setPupil({ x: (dx / dist) * maxOffset * reach, y: (dy / dist) * maxOffset * reach });
       });
@@ -163,15 +170,40 @@ export function MangoAvatar({ size = 56, mouthOpen = true, className, onClick, h
     return () => clearTimeout(timeout);
   }, []);
 
+  // Press-and-drag: squashes while held and follows the pointer within its own space, then
+  // springs back to rest on release - matching the reference build's grab interaction without
+  // repositioning the element in the page's own layout.
+  function handlePointerDown(e: React.PointerEvent) {
+    dragStart.current = { x: e.clientX, y: e.clientY };
+    setDragging(true);
+    controls.start({ scaleX: 1.1, scaleY: 0.9, transition: { duration: 0.15 } });
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+  }
+  function handlePointerMove(e: PointerEvent) {
+    const dx = e.clientX - dragStart.current.x;
+    const dy = e.clientY - dragStart.current.y;
+    const max = 22;
+    controls.set({ x: Math.max(-max, Math.min(max, dx)), y: Math.max(-max, Math.min(max, dy)) });
+  }
+  function handlePointerUp() {
+    setDragging(false);
+    controls.start({ x: 0, y: 0, scaleX: 1, scaleY: 1, transition: { type: "spring", stiffness: 300, damping: 14 } });
+    window.removeEventListener("pointermove", handlePointerMove);
+    window.removeEventListener("pointerup", handlePointerUp);
+  }
+
+  // Click (not a drag release) has a 50/50 chance of popping a small burst of hearts - same odds
+  // as the reference build.
   function handleClick() {
+    if (dragging) return;
     setPoked(true);
-    controls.start({
-      scaleX: [1, 1.1, 0.94, 1.02, 1],
-      scaleY: [1, 0.88, 1.05, 0.98, 1],
-      rotate: [0, -6, 5, -2, 0],
-      transition: { duration: 0.45, ease: "easeOut" },
-    });
-    setTimeout(() => setPoked(false), 850);
+    setTimeout(() => setPoked(false), 220);
+    if (Math.random() < 0.5) {
+      setHeartsBurst((n) => n + 1);
+      setShowHearts(true);
+      setTimeout(() => setShowHearts(false), 1700);
+    }
     onClick?.();
   }
 
@@ -183,100 +215,80 @@ export function MangoAvatar({ size = 56, mouthOpen = true, className, onClick, h
       height={size * 1.08}
       className={className}
       onClick={handleClick}
+      onPointerDown={handlePointerDown}
       animate={controls}
-      style={{ cursor: "pointer", transformOrigin: "50% 90%" }}
+      style={{ cursor: "grab", transformOrigin: "50% 50%" }}
     >
       <defs>
         <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={c1} />
-          <stop offset="50%" stopColor={c2} />
           <stop offset="100%" stopColor={c3} />
         </linearGradient>
       </defs>
 
-      {/* ground shadow - stays put while the body floats above it */}
-      <ellipse cx="49.8" cy="83" rx="20.5" ry="2.9" fill="#000" opacity={0.12} />
+      {/* ground shadow */}
+      <ellipse cx="50" cy="86" rx="20" ry="2.6" fill="#000" opacity={0.1} />
 
-      {/* everything below gently bobs up and down, like it's floating */}
+      {/* gentle "breathing" scale pulse, matching the reference build's keyframes */}
       <motion.g
-        animate={{ y: [0, -3.5, 0, 3.5, 0] }}
-        transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+        animate={{ scaleX: [1, 1.02, 1], scaleY: [1, 0.98, 1] }}
+        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+        style={{ transformOrigin: "50% 50px" }}
       >
-        {/* legs - thin sticks with small flat feet */}
-        <rect x="41" y="68.3" width="2" height="11.7" fill="#ffaa28" />
-        <rect x="57.6" y="68.3" width="2" height="11.7" fill="#ffaa28" />
-        <ellipse cx="41.5" cy="80" rx="3.4" ry="2" fill="#ffaa28" />
-        <ellipse cx="60" cy="80" rx="3.4" ry="2" fill="#ffaa28" />
-
-        {/* arms */}
-        <ellipse cx="24.4" cy="56.6" rx="4.9" ry="7.8" fill="#ff7882" />
-        <ellipse cx="75.6" cy="56.6" rx="4.9" ry="7.8" fill="#ff7882" />
-
         {renderOutfitBack(outfit)}
 
-        {/* body */}
-        <ellipse cx="49.8" cy="50" rx="26.4" ry="20.5" fill={`url(#${gradientId})`} />
+        {/* body - a heavily rounded blob rect, ported from the reference's 220x260 div at
+            border-radius: 48% */}
+        <rect x="22" y="16.9" width="56" height="66.2" rx="26.9" ry="31.8" fill={`url(#${gradientId})`} />
 
-        {/* small antenna on top */}
-        <ellipse cx="49.8" cy="28.3" rx="2.9" ry="3.9" fill="#ff6478" />
-
-        {/* eyes - open, with a shine; pupils follow the cursor - or a closed blink arc */}
+        {/* eyes - white circles with dark pupils that track the cursor, or a closed blink arc */}
         {blinking ? (
           <>
-            <path d="M32.3 45.9 Q39.1 51 45.9 45.9" stroke="#241f26" strokeWidth="1.4" fill="none" strokeLinecap="round" />
-            <path d="M53.7 45.9 Q60.5 51 67.3 45.9" stroke="#241f26" strokeWidth="1.4" fill="none" strokeLinecap="round" />
+            <path d="M34.7 40.1 Q40.1 44.5 45.5 40.1" stroke="#222" strokeWidth="1.4" fill="none" strokeLinecap="round" />
+            <path d="M54.5 40.1 Q59.9 44.5 65.3 40.1" stroke="#222" strokeWidth="1.4" fill="none" strokeLinecap="round" />
           </>
         ) : (
           <>
-            <circle cx="39.1" cy="45.9" r="6.8" fill="#fff" />
-            <circle cx="60.5" cy="45.9" r="6.8" fill="#fff" />
-            <motion.circle animate={{ cx: 39.1 + pupil.x, cy: 46.9 + pupil.y }} r="3.9" fill="#281e3c" />
-            <motion.circle animate={{ cx: 60.5 + pupil.x, cy: 46.9 + pupil.y }} r="3.9" fill="#281e3c" />
-            <motion.circle animate={{ cx: 37.7 + pupil.x * 0.5, cy: 44.9 + pupil.y * 0.5 }} r="1.4" fill="#fff" />
-            <motion.circle animate={{ cx: 59.1 + pupil.x * 0.5, cy: 44.9 + pupil.y * 0.5 }} r="1.4" fill="#fff" />
+            <circle cx="40.1" cy="40.1" r="5.4" fill="#fff" />
+            <circle cx="59.9" cy="40.1" r="5.4" fill="#fff" />
+            <motion.circle animate={{ cx: 40.1 + pupil.x, cy: 40.1 + pupil.y }} r="2.3" fill="#222" />
+            <motion.circle animate={{ cx: 59.9 + pupil.x, cy: 40.1 + pupil.y }} r="2.3" fill="#222" />
           </>
         )}
 
-        {/* mouth - a rounded dark opening with a little tongue */}
+        {/* mouth - flat top, rounded bottom corners, ported from the reference build */}
         {mouthOpen ? (
-          <>
-            <rect x="44.9" y="52.7" width="9.8" height="9.8" rx="2.9" fill="#3c1e46" />
-            <ellipse cx="49.8" cy="60" rx="2" ry="1.5" fill="#ff8282" />
-          </>
+          <path
+            d="M46.2 50 L53.8 50 L53.8 51.3 Q53.8 55.1 50 55.1 Q46.2 55.1 46.2 51.3 Z"
+            fill="#433"
+          />
         ) : (
-          <path d="M42 60 Q49.8 66 57.6 60" stroke="#3c1e46" strokeWidth="2.6" fill="none" strokeLinecap="round" />
+          <path d="M45 51 Q50 54.5 55 51" stroke="#433" strokeWidth="2" fill="none" strokeLinecap="round" />
         )}
 
         {renderOutfitFront(outfit)}
         {renderHat(hat)}
       </motion.g>
 
-      {/* a little burst of hearts when he's poked, so the reaction has a small payoff beyond the wobble */}
+      {/* a small burst of hearts on a lucky click, same 50/50 odds as the reference build */}
       <AnimatePresence>
-        {poked && (
-          <>
-            {[
-              { dx: -10, delay: 0 },
-              { dx: 0, delay: 0.06 },
-              { dx: 10, delay: 0.03 },
-            ].map((h, i) => (
-              <motion.text
-                key={i}
-                x={49.8 + h.dx}
-                y={20}
-                fontSize={9}
-                textAnchor="middle"
-                fill="#ff6478"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: [0, 1, 1, 0], y: -6 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.8, delay: h.delay, ease: "easeOut" }}
-              >
-                ♥
-              </motion.text>
-            ))}
-          </>
-        )}
+        {showHearts &&
+          Array.from({ length: 6 }).map((_, i) => (
+            <motion.text
+              key={`${heartsBurst}-${i}`}
+              x={50 + (i - 2.5) * 6}
+              y={20}
+              fontSize={7}
+              textAnchor="middle"
+              fill="#ff6478"
+              initial={{ opacity: 1, y: 30 }}
+              animate={{ opacity: 0, y: -20 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 1.4, delay: i * 0.04, ease: "easeOut" }}
+            >
+              ♥
+            </motion.text>
+          ))}
       </AnimatePresence>
     </motion.svg>
   );

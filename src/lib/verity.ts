@@ -269,6 +269,7 @@ const LS_PROFILE_PREFIX = "verity_profile_";
 export interface UserProfile {
   displayName?: string;
   phone?: string;
+  age?: number;
 }
 export function getUserProfile(username: string): UserProfile {
   const raw = safeGet(LS_PROFILE_PREFIX + username.toLowerCase());
@@ -356,6 +357,53 @@ export function bandColor(b: Band) {
 }
 export function bandClass(b: Band) {
   return "band-" + b;
+}
+
+/** A very rough, illustrative "expected" signs-probability baseline by age bracket - mild
+ *  slowing in pace and a few more pauses is developmentally normal with age, so the same raw
+ *  score shouldn't be read the same way for a 25-year-old and a 70-year-old. This is NOT a
+ *  clinically validated norm table (no such simple demo could be) - it exists purely to give
+ *  a directional "lower/typical/higher than expected for your age" comparison, on top of the
+ *  absolute score, which is what actually matters most. */
+function expectedBaselineForAge(age: number): number {
+  if (age < 40) return 0.16;
+  if (age < 60) return 0.21;
+  if (age < 75) return 0.27;
+  return 0.34;
+}
+
+export interface AgeComparison {
+  verdict: "lower" | "optimal" | "higher";
+  label: string;
+  note: string;
+}
+
+/** Compares a result's probability against a rough age-adjusted expectation, returning whether
+ *  it reads lower (better than typical for that age), roughly in line, or higher than typical.
+ *  A ±0.07 band around the baseline counts as "optimal" so ordinary day-to-day variation
+ *  doesn't get over-read as meaningfully better or worse. */
+export function compareToAgeNorm(probability: number, age: number): AgeComparison {
+  const baseline = expectedBaselineForAge(age);
+  const diff = probability - baseline;
+  if (diff < -0.07) {
+    return {
+      verdict: "lower",
+      label: `Better than typical for age ${age}`,
+      note: "Your result shows fewer signs than what's roughly expected for your age group.",
+    };
+  }
+  if (diff > 0.07) {
+    return {
+      verdict: "higher",
+      label: `Higher than typical for age ${age}`,
+      note: "Your result shows more signs than what's roughly expected for your age group - worth keeping an eye on.",
+    };
+  }
+  return {
+    verdict: "optimal",
+    label: `Typical for age ${age}`,
+    note: "Your result is roughly in line with what's expected for your age group.",
+  };
 }
 export function computeStdDev(arr: number[]): number {
   if (!arr.length) return 0;

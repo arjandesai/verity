@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useState } from "react";
 import { CheckCircle2, AlertTriangle, AlertCircle, Copy, Check } from "lucide-react";
-import { bandClass, bandColor, bandLabel, type Band } from "@/lib/verity";
+import { bandClass, bandColor, bandLabel, compareToAgeNorm, type Band } from "@/lib/verity";
 
 interface ScoreBlockProps {
   probability: number;
@@ -9,6 +9,9 @@ interface ScoreBlockProps {
   /** When set, shows a "Copy summary" button that copies a plain-text result summary - handy
    *  for pasting into a message to a doctor or family member without screenshotting. */
   modality?: string;
+  /** When set (from the user's saved profile), shows a rough age-adjusted comparison alongside
+   *  the raw score. */
+  age?: number;
 }
 
 /** Converts a 0-1 probability into a friendlier 1-10 scale, 1 = very low, 10 = very high. */
@@ -43,12 +46,13 @@ export function verdictFor(band: Band): { label: string; note: string; icon: typ
   };
 }
 
-export function ScoreBlock({ probability, band, modality }: ScoreBlockProps) {
+export function ScoreBlock({ probability, band, modality, age }: ScoreBlockProps) {
   const pct = Math.round(probability * 100);
   const scale = scaleOf10(probability);
   const verdict = verdictFor(band);
   const Icon = verdict.icon;
   const [copied, setCopied] = useState(false);
+  const ageComparison = age ? compareToAgeNorm(probability, age) : null;
 
   async function copySummary() {
     const date = new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
@@ -56,8 +60,9 @@ export function ScoreBlock({ probability, band, modality }: ScoreBlockProps) {
       `Verity ${modality || "screening"} result - ${date}\n` +
       `Score: ${pct}% (${scale}/10, lower is generally better)\n` +
       `Status: ${bandLabel(band)}\n` +
-      `${verdict.note}\n\n` +
-      `This is from a non-clinical screening demo, not a medical diagnosis.`;
+      `${verdict.note}\n` +
+      (ageComparison ? `${ageComparison.label}: ${ageComparison.note}\n` : "") +
+      `\nThis is from a non-clinical screening demo, not a medical diagnosis.`;
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
@@ -99,6 +104,23 @@ export function ScoreBlock({ probability, band, modality }: ScoreBlockProps) {
       <div className={`band-pill ${bandClass(band)}`} style={{ marginTop: 10 }}>
         {bandLabel(band)}
       </div>
+      {ageComparison && (
+        <div
+          style={{
+            marginTop: 14,
+            padding: "10px 16px",
+            borderRadius: 10,
+            background: "var(--bg)",
+            border: "1px solid var(--border)",
+            maxWidth: 420,
+            marginLeft: "auto",
+            marginRight: "auto",
+          }}
+        >
+          <div style={{ fontSize: 13, fontWeight: 700 }}>{ageComparison.label}</div>
+          <div style={{ fontSize: 12, color: "var(--text-soft)", marginTop: 4, lineHeight: 1.5 }}>{ageComparison.note}</div>
+        </div>
+      )}
       {modality && (
         <button
           className="btn btn-secondary btn-sm"

@@ -25,6 +25,7 @@ export default function Settings() {
 
   const [displayName, setDisplayName] = useState("");
   const [phone, setPhone] = useState("");
+  const [age, setAge] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
 
   const [email, setEmail] = useState(user?.email || "");
@@ -46,6 +47,7 @@ export default function Settings() {
     const profile = getUserProfile(user.username);
     setDisplayName(profile.displayName || "");
     setPhone(profile.phone || "");
+    setAge(profile.age ? String(profile.age) : "");
     setTextScaleState(getTextScale());
   }, []);
 
@@ -53,8 +55,13 @@ export default function Settings() {
 
   function saveProfile(e: React.FormEvent) {
     e.preventDefault();
+    const parsedAge = age.trim() ? parseInt(age.trim(), 10) : undefined;
+    if (age.trim() && (Number.isNaN(parsedAge) || parsedAge! < 1 || parsedAge! > 120)) {
+      showToast("Please enter a valid age between 1 and 120.");
+      return;
+    }
     setSavingProfile(true);
-    setUserProfile(user!.username, { displayName: displayName.trim(), phone: phone.trim() });
+    setUserProfile(user!.username, { displayName: displayName.trim(), phone: phone.trim(), age: parsedAge });
     setSavingProfile(false);
     showToast("Profile updated!");
   }
@@ -151,6 +158,18 @@ export default function Settings() {
           <div>
             <label style={labelStyle}>Phone number</label>
             <input style={inputStyle} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Optional" type="tel" />
+          </div>
+          <div>
+            <label style={labelStyle}>Age</label>
+            <input
+              style={inputStyle}
+              value={age}
+              onChange={(e) => setAge(e.target.value)}
+              placeholder="Optional - used to compare your test results to your age group"
+              type="number"
+              min={1}
+              max={120}
+            />
           </div>
           <button className="btn btn-primary" type="submit" disabled={savingProfile} style={{ alignSelf: "flex-start" }}>
             Save profile

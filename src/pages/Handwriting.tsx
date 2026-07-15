@@ -18,6 +18,8 @@ import {
   setGeminiKey,
   canvasToFile,
   assessDrawingSanity,
+  getUser,
+  getUserProfile,
   type HandwritingMetrics,
   type Band,
   type GeminiAnalysis,
@@ -321,7 +323,15 @@ export default function Handwriting() {
 
           {done && (
             <div>
-              <ScoreBlock probability={probability} band={band} modality="Handwriting test" />
+              <ScoreBlock
+                probability={probability}
+                band={band}
+                modality="Handwriting test"
+                age={(() => {
+                  const u = getUser();
+                  return u ? getUserProfile(u.username).age : undefined;
+                })()}
+              />
               {metrics && !geminiAnalysis && (
                 <BreakdownGrid
                   items={[

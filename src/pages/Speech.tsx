@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useEffect, useRef, useState } from "react";
-import { Mic } from "lucide-react";
+import { Mic, Volume2 } from "lucide-react";
 import { RevealOnScroll } from "@/components/RevealOnScroll";
 import { ScoreBlock, BreakdownGrid } from "@/components/ScoreBlock";
 import { DifficultySelector, type Difficulty } from "@/components/LevelBar";
@@ -19,6 +19,8 @@ import {
   getGeminiKey,
   setGeminiKey,
   SPEECH_LANGUAGES,
+  getUser,
+  getUserProfile,
   type SpeechMetrics,
   type Band,
   type SpeechLanguageCode,
@@ -180,6 +182,19 @@ function pickPassage(d: Difficulty, language: SpeechLanguageCode): string {
   return options[Math.floor(Math.random() * options.length)];
 }
 
+// Maps our language codes to BCP-47 locale tags so the browser's speech synthesis voice
+// actually matches the passage's language instead of reading everything as English.
+const SPEECH_LOCALE: Record<SpeechLanguageCode, string> = {
+  en: "en-US",
+  es: "es-ES",
+  fr: "fr-FR",
+  de: "de-DE",
+  hi: "hi-IN",
+  zh: "zh-CN",
+  ar: "ar-SA",
+  pt: "pt-BR",
+};
+
 type Stage = "idle" | "recording" | "done";
 
 export default function Speech() {
@@ -194,6 +209,18 @@ export default function Speech() {
   function changeLanguage(l: SpeechLanguageCode) {
     setLanguage(l);
     setPassage(pickPassage(difficulty, l));
+  }
+  const [speaking, setSpeaking] = useState(false);
+  function speakPassage() {
+    if (!("speechSynthesis" in window)) return;
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(passage);
+    utter.lang = SPEECH_LOCALE[language];
+    utter.rate = 0.92;
+    utter.onstart = () => setSpeaking(true);
+    utter.onend = () => setSpeaking(false);
+    utter.onerror = () => setSpeaking(false);
+    window.speechSynthesis.speak(utter);
   }
   const [stage, setStage] = useState<Stage>("idle");
   const [seconds, setSeconds] = useState(0);
@@ -491,10 +518,24 @@ export default function Speech() {
 
           <div
             className="card"
-            style={{ padding: "20px 22px", background: "var(--bg)", fontSize: 17, lineHeight: 1.6, marginBottom: 24 }}
+            style={{ padding: "20px 22px", background: "var(--bg)", fontSize: 17, lineHeight: 1.6, marginBottom: 10 }}
           >
             "{passage}"
           </div>
+
+          {stage === "idle" && "speechSynthesis" in window && (
+            <div style={{ textAlign: "center", marginBottom: 24 }}>
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={speakPassage}
+                disabled={speaking}
+                style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+              >
+                <Volume2 size={14} />
+                {speaking ? "Playing…" : "Listen to passage"}
+              </button>
+            </div>
+          )}
 
           {error && <div style={{ color: "var(--text)", fontWeight: 700, fontSize: 13.5, marginBottom: 16, borderLeft: "3px solid var(--text)", paddingLeft: 10 }}>{error}</div>}
 
@@ -534,7 +575,15 @@ export default function Speech() {
 
           {stage === "done" && (metrics || geminiAnalysis) && (
             <div>
-              <ScoreBlock probability={probability} band={band} modality="Speech test" />
+              <ScoreBlock
+                probability={probability}
+                band={band}
+                modality="Speech test"
+                age={(() => {
+                  const u = getUser();
+                  return u ? getUserProfile(u.username).age : undefined;
+                })()}
+              />
               {metrics && !geminiAnalysis && (
                 <BreakdownGrid
                   items={[
