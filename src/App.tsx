@@ -24,6 +24,7 @@ import Pet from "@/pages/Pet";
 import Settings from "@/pages/Settings";
 import Journal from "@/pages/Journal";
 import Resources from "@/pages/Resources";
+import FAQ from "@/pages/FAQ";
 import { getTextScale, applyTextScale } from "@/lib/verity";
 
 function GlobalDock() {
@@ -71,6 +72,7 @@ export default function App() {
               <Route path="/settings" element={<Settings />} />
               <Route path="/journal" element={<Journal />} />
               <Route path="/resources" element={<Resources />} />
+              <Route path="/faq" element={<FAQ />} />
             </Routes>
           </main>
           <CinematicFooter />

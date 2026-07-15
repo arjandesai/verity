@@ -1,7 +1,8 @@
 import * as React from "react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { getUser, getAccountCount, type VerityUser } from "@/lib/verity";
+import { Lightbulb } from "lucide-react";
+import { getUser, getAccountCount, tipOfTheDay, type VerityUser } from "@/lib/verity";
 import { MagneticButton } from "@/components/MagneticButton";
 import { RevealOnScroll } from "@/components/RevealOnScroll";
 import { FlipWord } from "@/components/TypewriterText";
@@ -208,7 +209,7 @@ export default function Home() {
       )}
 
       {user && (
-        <section className="container" style={{ paddingBottom: 160, textAlign: "center" }}>
+        <section className="container" style={{ paddingBottom: 40, textAlign: "center" }}>
           <RevealOnScroll>
             <div className="card" style={{ padding: "48px 32px", maxWidth: 720, margin: "0 auto" }}>
               <h2 style={{ fontSize: 26, fontWeight: 800, marginBottom: 10 }}>Welcome back, {user.username}.</h2>
@@ -218,6 +219,23 @@ export default function Home() {
               <Link to="/dashboard">
                 <GetStartedButton label="Go to your dashboard" />
               </Link>
+            </div>
+          </RevealOnScroll>
+        </section>
+      )}
+
+      {user && (
+        <section className="container" style={{ paddingBottom: 160 }}>
+          <RevealOnScroll>
+            <div
+              className="card"
+              style={{ padding: "22px 26px", maxWidth: 720, margin: "0 auto", display: "flex", gap: 14, alignItems: "flex-start" }}
+            >
+              <Lightbulb size={22} style={{ flexShrink: 0, marginTop: 2, color: "#e8b43c" }} />
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 13.5, marginBottom: 4 }}>Brain health tip of the day</div>
+                <div style={{ fontSize: 13.5, lineHeight: 1.6, color: "var(--text-soft)" }}>{tipOfTheDay()}</div>
+              </div>
             </div>
           </RevealOnScroll>
         </section>

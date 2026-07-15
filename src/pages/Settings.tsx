@@ -1,6 +1,7 @@
 import * as React from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Download, Upload } from "lucide-react";
 import { RevealOnScroll } from "@/components/RevealOnScroll";
 import { useToast } from "@/components/Toast";
 import { ButtonHoldAndRelease } from "@/components/ui/hold-and-release-button";
@@ -16,6 +17,8 @@ import {
   getTextScale,
   setTextScale,
   deleteAccount,
+  exportAllData,
+  importAllData,
 } from "@/lib/verity";
 
 export default function Settings() {
@@ -114,6 +117,40 @@ export default function Settings() {
   function handleTextScale(v: number) {
     setTextScaleState(v);
     setTextScale(v);
+  }
+
+  function handleBackup() {
+    const json = exportAllData();
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `verity-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast("Backup downloaded.");
+  }
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  function handleRestoreClick() {
+    fileInputRef.current?.click();
+  }
+  function handleRestoreFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!window.confirm("Restoring a backup will overwrite any matching accounts and data currently on this device. Continue?")) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = importAllData(String(reader.result || ""));
+      if (!result.ok) {
+        showToast(result.reason || "Restore failed.");
+        return;
+      }
+      showToast(`Restored ${result.keysRestored} item${result.keysRestored === 1 ? "" : "s"}. Reloading…`);
+      setTimeout(() => window.location.reload(), 1200);
+    };
+    reader.readAsText(file);
   }
 
   function handleSignOut() {
@@ -233,6 +270,27 @@ export default function Settings() {
           </div>
           <div style={{ fontSize: 12.5, color: "var(--text-soft)", marginTop: 8 }}>
             Adjusts text size across the whole site. Currently {Math.round(textScale * 100)}%.
+          </div>
+        </div>
+      </RevealOnScroll>
+
+      <RevealOnScroll delay={0.22}>
+        <div className="card" style={{ padding: 22, marginBottom: 20 }}>
+          <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 6 }}>Backup & restore</div>
+          <div style={{ fontSize: 12.5, color: "var(--text-soft)", marginBottom: 16, lineHeight: 1.5 }}>
+            Everything in Verity lives only on this device. Download a backup file now and then to protect against a
+            cleared browser cache or a new device - you can restore it here any time.
+          </div>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <button className="btn btn-secondary btn-sm" onClick={handleBackup} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <Download size={14} />
+              Download backup
+            </button>
+            <button className="btn btn-outline btn-sm" onClick={handleRestoreClick} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <Upload size={14} />
+              Restore from backup
+            </button>
+            <input ref={fileInputRef} type="file" accept="application/json" onChange={handleRestoreFile} style={{ display: "none" }} />
           </div>
         </div>
       </RevealOnScroll>

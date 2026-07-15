@@ -41,6 +41,7 @@ const MENU: MenuEntry[] = [
     items: [
       { title: "About Verity", description: "What Verity is and how it works.", icon: <Info className="size-5 shrink-0" />, to: "/about" },
       { title: "Resources", description: "Helplines, caregiving guidance, and how to talk to a doctor.", icon: <HeartHandshake className="size-5 shrink-0" />, to: "/resources" },
+      { title: "FAQ", description: "Answers to the most common questions about Verity.", icon: <Info className="size-5 shrink-0" />, to: "/faq" },
       { title: "Privacy & Terms", description: "How your data is handled, and the terms of use.", icon: <ShieldCheck className="size-5 shrink-0" />, to: "/legal" },
     ],
   },
@@ -58,6 +59,7 @@ const MOBILE_LINKS = [
   { to: "/pet", label: "Mango (pet)" },
   { to: "/about", label: "About" },
   { to: "/resources", label: "Resources" },
+  { to: "/faq", label: "FAQ" },
   { to: "/legal", label: "Privacy & Terms" },
   { to: "/settings", label: "Settings" },
 ];

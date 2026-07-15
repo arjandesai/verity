@@ -1136,6 +1136,63 @@ export function historyToCsv(history: HistoryEntry[]): string {
   return rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
 }
 
+/* ---------- brain health tip of the day ---------- */
+export const BRAIN_TIPS: string[] = [
+  "Regular aerobic exercise, even a 20-minute daily walk, is one of the most consistently supported ways to support long-term brain health.",
+  "Getting consistent, quality sleep helps the brain clear waste proteins linked to cognitive decline - aim for 7-9 hours.",
+  "Learning something genuinely new (an instrument, a language, a skill) builds cognitive reserve more than repeating familiar puzzles.",
+  "Staying socially connected is linked to slower cognitive decline - a phone call with a friend counts.",
+  "A Mediterranean-style diet, rich in vegetables, fish, and healthy fats, is associated with better long-term cognitive outcomes.",
+  "Managing blood pressure and blood sugar isn't just heart health - both are closely tied to brain health too.",
+  "Chronic stress affects memory and focus - even a few minutes of deliberate, slow breathing can help in the moment.",
+  "Reading and writing by hand regularly keeps fine motor and language pathways active.",
+  "Hearing loss, left untreated, is one of the largest modifiable risk factors for cognitive decline - a hearing check is worth it.",
+  "Hydration affects concentration and short-term memory more than most people expect.",
+  "Multitasking doesn't train the brain - it trains switching costs. Focused, single-task attention is the better exercise.",
+  "Novelty matters: a new walking route or a new recipe engages the brain more than a well-worn routine.",
+];
+export function tipOfTheDay(): string {
+  const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
+  return BRAIN_TIPS[dayOfYear % BRAIN_TIPS.length];
+}
+
+/* ---------- backup & restore ---------- */
+/** Bundles every Verity-related key in localStorage (all accounts, all data) into one portable
+ *  JSON object, so a user isn't one cleared cache away from losing everything - this being a
+ *  local-only, no-backend app makes that a real risk worth covering. */
+export function exportAllData(): string {
+  const dump: Record<string, string> = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith("verity")) {
+      const val = localStorage.getItem(key);
+      if (val != null) dump[key] = val;
+    }
+  }
+  return JSON.stringify({ exportedAt: new Date().toISOString(), data: dump }, null, 2);
+}
+export interface RestoreResult {
+  ok: boolean;
+  reason?: string;
+  keysRestored?: number;
+}
+export function importAllData(json: string): RestoreResult {
+  try {
+    const parsed = JSON.parse(json);
+    const data = parsed?.data;
+    if (!data || typeof data !== "object") return { ok: false, reason: "That file doesn't look like a Verity backup." };
+    let count = 0;
+    for (const key of Object.keys(data)) {
+      if (!key.startsWith("verity")) continue;
+      localStorage.setItem(key, data[key]);
+      count++;
+    }
+    return { ok: true, keysRestored: count };
+  } catch {
+    return { ok: false, reason: "That file couldn't be read - make sure it's an unedited Verity backup file." };
+  }
+}
+
 /* ---------- journal ---------- */
 const LS_JOURNAL = "verity_journal";
 export type JournalMood = "great" | "okay" | "foggy" | "rough";
