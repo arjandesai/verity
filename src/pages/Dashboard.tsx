@@ -5,6 +5,7 @@ import { RevealOnScroll } from "@/components/RevealOnScroll";
 import { AwardBadge, type AwardTier } from "@/components/ui/award-badge";
 import ProgressIndicator from "@/components/ui/progress-indicator";
 import { ScoreTrendChart } from "@/components/ScoreTrendChart";
+import { ActivityHeatmap } from "@/components/ActivityHeatmap";
 import { Confetti } from "@/components/Confetti";
 import { useToast } from "@/components/Toast";
 import { useAwardPopup } from "@/components/ui/award-popup";
@@ -28,6 +29,8 @@ import {
   getSecretSteps,
   SECRET_STEPS,
   addMangoCoins,
+  getJournal,
+  getUserProfile,
   type HistoryEntry,
 } from "@/lib/verity";
 
@@ -196,6 +199,8 @@ export default function Dashboard() {
   const [xp, setXp] = useState(0);
   const [celebrate, setCelebrate] = useState(false);
   const [showAllAchievements, setShowAllAchievements] = useState(false);
+  const [journalCount, setJournalCount] = useState(0);
+  const [hasAge, setHasAge] = useState(false);
   const user = getUser();
   const { showToast } = useToast();
   const { showAward } = useAwardPopup();
@@ -204,6 +209,8 @@ export default function Dashboard() {
     const h = getHistory();
     setHistory(h);
     setXp(getGameXP());
+    setJournalCount(getJournal().length);
+    if (user) setHasAge(!!getUserProfile(user.username).age);
 
     const streak = computeStreak(h);
     const lastCelebrated = parseInt(safeGet(userKey(STREAK_KEY)) || "0", 10);
@@ -273,6 +280,24 @@ export default function Dashboard() {
     [history]
   );
 
+  const activityTimestamps = useMemo(() => {
+    return [...history.map((h) => h.timestamp), ...getJournal().map((j) => j.timestamp)];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [history]);
+
+  const onboardingSteps = useMemo(
+    () => [
+      { label: "Create your account", done: true },
+      { label: "Take your first test", done: history.length > 0, to: "/tests" },
+      { label: "Play a brain game", done: gamesPlayed > 0, to: "/games" },
+      { label: "Add your age for age-adjusted results", done: hasAge, to: "/settings" },
+      { label: "Log your first journal check-in", done: journalCount > 0, to: "/journal" },
+      { label: "Download a backup of your data", done: false, to: "/settings" },
+    ],
+    [history.length, gamesPlayed, hasAge, journalCount]
+  );
+  const onboardingDone = onboardingSteps.filter((s) => s.done).length;
+
   function handleClear() {
     if (window.confirm("Clear all your saved test history? This can't be undone.")) {
       clearHistory();
@@ -323,6 +348,58 @@ export default function Dashboard() {
         </div>
       </RevealOnScroll>
 
+      {onboardingDone < onboardingSteps.length && (
+        <RevealOnScroll delay={0.01}>
+          <div className="card" style={{ padding: 22, marginBottom: 24 }}>
+            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 12 }}>
+              <div style={{ fontWeight: 700, fontSize: 15 }}>Getting started</div>
+              <span className="text-text-soft" style={{ fontSize: 12.5 }}>
+                {onboardingDone}/{onboardingSteps.length}
+              </span>
+            </div>
+            <div style={{ height: 6, borderRadius: 999, background: "var(--blue)", overflow: "hidden", marginBottom: 14 }}>
+              <div
+                style={{
+                  height: "100%",
+                  width: `${(onboardingDone / onboardingSteps.length) * 100}%`,
+                  background: "var(--blue-deep)",
+                  transition: "width 0.3s ease",
+                }}
+              />
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {onboardingSteps.map((s) => (
+                <Link
+                  key={s.label}
+                  to={s.to || "#"}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    fontSize: 13.5,
+                    color: s.done ? "var(--text-soft)" : "var(--text)",
+                    textDecoration: s.done ? "line-through" : "none",
+                    pointerEvents: s.to ? "auto" : "none",
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 16,
+                      height: 16,
+                      borderRadius: "50%",
+                      border: `1.5px solid ${s.done ? "var(--blue-deep)" : "var(--border)"}`,
+                      background: s.done ? "var(--blue-deep)" : "transparent",
+                      flexShrink: 0,
+                    }}
+                  />
+                  {s.label}
+                </Link>
+              ))}
+            </div>
+          </div>
+        </RevealOnScroll>
+      )}
+
       {history.length > 0 && (
         <RevealOnScroll delay={0.02}>
           <div className="card" style={{ padding: 24, marginBottom: 24, textAlign: "center" }}>
@@ -358,6 +435,15 @@ export default function Dashboard() {
           </div>
         </div>
       </RevealOnScroll>
+
+      {activityTimestamps.length > 0 && (
+        <RevealOnScroll delay={0.07}>
+          <div className="card no-print" style={{ padding: 22, marginBottom: 30 }}>
+            <h3 style={{ fontSize: 14.5, fontWeight: 700, marginBottom: 12 }}>Activity</h3>
+            <ActivityHeatmap timestamps={activityTimestamps} />
+          </div>
+        </RevealOnScroll>
+      )}
 
       {(speechTrend.length >= 2 || handwritingTrend.length >= 2) && (
         <RevealOnScroll delay={0.08}>

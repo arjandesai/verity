@@ -1272,6 +1272,7 @@ export interface JournalEntry {
   timestamp: number;
   mood: JournalMood;
   note: string;
+  sleepHours?: number;
 }
 export function getJournal(): JournalEntry[] {
   const raw = safeGet(userKey(LS_JOURNAL));
@@ -1282,12 +1283,25 @@ export function getJournal(): JournalEntry[] {
     return [];
   }
 }
-export function addJournalEntry(mood: JournalMood, note: string): JournalEntry {
-  const full: JournalEntry = { id: Math.random().toString(36).slice(2), timestamp: Date.now(), mood, note: note.trim() };
+export function addJournalEntry(mood: JournalMood, note: string, sleepHours?: number): JournalEntry {
+  const full: JournalEntry = {
+    id: Math.random().toString(36).slice(2),
+    timestamp: Date.now(),
+    mood,
+    note: note.trim(),
+    sleepHours,
+  };
   const entries = getJournal();
   entries.push(full);
   safeSet(userKey(LS_JOURNAL), JSON.stringify(entries));
   return full;
+}
+export function journalToCsv(entries: JournalEntry[]): string {
+  const rows = [["timestamp", "date", "mood", "sleep_hours", "note"]];
+  entries.forEach((e) => {
+    rows.push([String(e.timestamp), new Date(e.timestamp).toISOString(), e.mood, e.sleepHours != null ? String(e.sleepHours) : "", e.note]);
+  });
+  return rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
 }
 export function deleteJournalEntry(id: string) {
   const entries = getJournal().filter((e) => e.id !== id);

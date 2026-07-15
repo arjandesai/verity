@@ -7,6 +7,7 @@ import { ToastProvider } from "@/components/Toast";
 import { AwardPopupProvider } from "@/components/ui/award-popup";
 import { Buddy } from "@/components/Buddy";
 import { SecretHunter } from "@/components/SecretHunter";
+import { KeyboardShortcuts } from "@/components/KeyboardShortcuts";
 import Dock from "@/components/ui/dock";
 import { TermsGate } from "@/components/TermsGate";
 import { useIsMobile } from "@/lib/useIsMobile";
@@ -85,6 +86,7 @@ export default function App() {
           <GlobalDock />
           <Buddy />
           <SecretHunter />
+          <KeyboardShortcuts />
         </div>
       </TermsGate>
       </AwardPopupProvider>

@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Trash2, BookOpen } from "lucide-react";
+import { Trash2, BookOpen, Download } from "lucide-react";
 import { RevealOnScroll } from "@/components/RevealOnScroll";
 import { useToast } from "@/components/Toast";
 import {
@@ -9,6 +9,7 @@ import {
   getJournal,
   addJournalEntry,
   deleteJournalEntry,
+  journalToCsv,
   addMangoCoins,
   JOURNAL_MOODS,
   type JournalEntry,
@@ -26,6 +27,7 @@ export default function Journal() {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [mood, setMood] = useState<JournalMood | null>(null);
   const [note, setNote] = useState("");
+  const [sleepHours, setSleepHours] = useState("");
 
   useEffect(() => {
     setEntries(getJournal());
@@ -50,17 +52,30 @@ export default function Journal() {
       showToast("Pick how today felt first.");
       return;
     }
-    addJournalEntry(mood, note);
+    const hours = sleepHours.trim() ? parseFloat(sleepHours.trim()) : undefined;
+    addJournalEntry(mood, note, hours != null && !Number.isNaN(hours) ? hours : undefined);
     addMangoCoins(2);
     setEntries(getJournal());
     setMood(null);
     setNote("");
+    setSleepHours("");
     showToast("Logged - thanks for checking in.");
   }
 
   function remove(id: string) {
     deleteJournalEntry(id);
     setEntries(getJournal());
+  }
+
+  function exportCsv() {
+    const csv = journalToCsv(entries);
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "verity-journal.csv";
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   return (
@@ -110,6 +125,26 @@ export default function Journal() {
               marginBottom: 14,
             }}
           />
+          <div style={{ marginBottom: 16, maxWidth: 200 }}>
+            <label style={{ display: "block", fontSize: 12.5, color: "var(--text-soft)", marginBottom: 6 }}>Hours of sleep last night (optional)</label>
+            <input
+              type="number"
+              min={0}
+              max={24}
+              step={0.5}
+              value={sleepHours}
+              onChange={(e) => setSleepHours(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "9px 12px",
+                borderRadius: 10,
+                border: "1px solid var(--border)",
+                background: "var(--bg)",
+                color: "var(--text)",
+                fontSize: 14,
+              }}
+            />
+          </div>
           <button className="btn btn-primary" type="submit">
             Log today
           </button>
@@ -117,8 +152,14 @@ export default function Journal() {
       </RevealOnScroll>
 
       <RevealOnScroll delay={0.1}>
-        <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 12 }}>
-          Past entries <span className="text-text-soft" style={{ fontWeight: 500, fontSize: 13 }}>({entries.length})</span>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
+          <div style={{ fontWeight: 700, fontSize: 15 }}>
+            Past entries <span className="text-text-soft" style={{ fontWeight: 500, fontSize: 13 }}>({entries.length})</span>
+          </div>
+          <button className="btn btn-secondary btn-sm" onClick={exportCsv} disabled={!entries.length} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <Download size={13} />
+            Export CSV
+          </button>
         </div>
         {!entries.length ? (
           <div className="card" style={{ padding: 30, textAlign: "center" }}>
@@ -135,7 +176,10 @@ export default function Journal() {
                       <span style={{ fontSize: 17 }}>{m.emoji}</span>
                       {m.label}
                     </div>
-                    <div style={{ fontSize: 12, color: "var(--text-soft)", marginTop: 2 }}>{new Date(e.timestamp).toLocaleString()}</div>
+                    <div style={{ fontSize: 12, color: "var(--text-soft)", marginTop: 2 }}>
+                      {new Date(e.timestamp).toLocaleString()}
+                      {e.sleepHours != null && ` · ${e.sleepHours}h sleep`}
+                    </div>
                     {e.note && <div style={{ fontSize: 13.5, marginTop: 8, lineHeight: 1.5 }}>{e.note}</div>}
                   </div>
                   <button
