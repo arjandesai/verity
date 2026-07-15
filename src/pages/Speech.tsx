@@ -13,6 +13,7 @@ import {
   probabilityFromSpeechMetrics,
   bandFor,
   addHistoryEntry,
+  getHistory,
   markDailyActivity,
   analyzeSpeechAudio,
   probabilityFromGeminiSpeechAnalysis,
@@ -228,6 +229,10 @@ export default function Speech() {
   const [geminiAnalysis, setGeminiAnalysis] = useState<GeminiSpeechAnalysis | null>(null);
   const [probability, setProbability] = useState(0);
   const [band, setBand] = useState<Band>("typical");
+  const [prevProbability] = useState<number | undefined>(() => {
+    const prior = getHistory().filter((h) => h.modality === "speech");
+    return prior.length ? prior[prior.length - 1].probability : undefined;
+  });
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -583,6 +588,7 @@ export default function Speech() {
                   const u = getUser();
                   return u ? getUserProfile(u.username).age : undefined;
                 })()}
+                previousProbability={prevProbability}
               />
               {metrics && !geminiAnalysis && (
                 <BreakdownGrid

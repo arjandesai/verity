@@ -12,6 +12,7 @@ import {
   probabilityFromHandwriting,
   bandFor,
   addHistoryEntry,
+  getHistory,
   analyzeHandwritingPhoto,
   probabilityFromGeminiAnalysis,
   getGeminiKey,
@@ -75,6 +76,10 @@ export default function Handwriting() {
   const [metrics, setMetrics] = useState<HandwritingMetrics | null>(null);
   const [probability, setProbability] = useState(0);
   const [band, setBand] = useState<Band>("typical");
+  const [prevProbability] = useState<number | undefined>(() => {
+    const prior = getHistory().filter((h) => h.modality === "handwriting");
+    return prior.length ? prior[prior.length - 1].probability : undefined;
+  });
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
 
@@ -331,6 +336,7 @@ export default function Handwriting() {
                   const u = getUser();
                   return u ? getUserProfile(u.username).age : undefined;
                 })()}
+                previousProbability={prevProbability}
               />
               {metrics && !geminiAnalysis && (
                 <BreakdownGrid

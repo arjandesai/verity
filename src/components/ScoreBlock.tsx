@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useState } from "react";
-import { CheckCircle2, AlertTriangle, AlertCircle, Copy, Check } from "lucide-react";
+import { CheckCircle2, AlertTriangle, AlertCircle, Copy, Check, TrendingDown, TrendingUp, Minus } from "lucide-react";
 import { bandClass, bandColor, bandLabel, compareToAgeNorm, type Band } from "@/lib/verity";
 
 interface ScoreBlockProps {
@@ -12,6 +12,9 @@ interface ScoreBlockProps {
   /** When set (from the user's saved profile), shows a rough age-adjusted comparison alongside
    *  the raw score. */
   age?: number;
+  /** The probability from the user's previous test of the same modality, if any - shows a small
+   *  "vs your last test" delta so a single result can be read in context of their own trend. */
+  previousProbability?: number;
 }
 
 /** Converts a 0-1 probability into a friendlier 1-10 scale, 1 = very low, 10 = very high. */
@@ -46,13 +49,14 @@ export function verdictFor(band: Band): { label: string; note: string; icon: typ
   };
 }
 
-export function ScoreBlock({ probability, band, modality, age }: ScoreBlockProps) {
+export function ScoreBlock({ probability, band, modality, age, previousProbability }: ScoreBlockProps) {
   const pct = Math.round(probability * 100);
   const scale = scaleOf10(probability);
   const verdict = verdictFor(band);
   const Icon = verdict.icon;
   const [copied, setCopied] = useState(false);
   const ageComparison = age ? compareToAgeNorm(probability, age) : null;
+  const deltaPts = previousProbability != null ? Math.round((probability - previousProbability) * 100) : null;
 
   async function copySummary() {
     const date = new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
@@ -62,6 +66,9 @@ export function ScoreBlock({ probability, band, modality, age }: ScoreBlockProps
       `Status: ${bandLabel(band)}\n` +
       `${verdict.note}\n` +
       (ageComparison ? `${ageComparison.label}: ${ageComparison.note}\n` : "") +
+      (deltaPts !== null
+        ? `${deltaPts === 0 ? "Same as your last test" : `${Math.abs(deltaPts)}% ${deltaPts < 0 ? "better" : "higher"} than your last test`}\n`
+        : "") +
       `\nThis is from a non-clinical screening demo, not a medical diagnosis.`;
     try {
       await navigator.clipboard.writeText(text);
@@ -100,6 +107,22 @@ export function ScoreBlock({ probability, band, modality, age }: ScoreBlockProps
         <span className="text-text-soft" style={{ fontSize: 12.5 }}>on a 1 (low) to 10 (high) scale</span>
       </div>
       <div className="score-sub">A lower number is generally a good sign. This isn't a diagnosis - just one helpful data point.</div>
+      {deltaPts !== null && (
+        <div
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 5,
+            marginTop: 8,
+            fontSize: 12.5,
+            fontWeight: 600,
+            color: deltaPts < 0 ? "#3b8a4e" : deltaPts > 0 ? "#b23b3b" : "var(--text-soft)",
+          }}
+        >
+          {deltaPts < 0 ? <TrendingDown size={14} /> : deltaPts > 0 ? <TrendingUp size={14} /> : <Minus size={14} />}
+          {deltaPts === 0 ? "Same as your last test" : `${Math.abs(deltaPts)}% ${deltaPts < 0 ? "better" : "higher"} than your last test`}
+        </div>
+      )}
       <div style={{ fontSize: 13, color: "var(--text-soft)", maxWidth: 420, margin: "10px auto 0", lineHeight: 1.6 }}>{verdict.note}</div>
       <div className={`band-pill ${bandClass(band)}`} style={{ marginTop: 10 }}>
         {bandLabel(band)}

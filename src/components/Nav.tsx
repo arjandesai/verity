@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { Menu, X, ChevronDown, Mic, PenLine, Gamepad2, ClipboardList, LineChart, Info, ShieldCheck, PawPrint, Settings as SettingsIcon, Coins } from "lucide-react";
+import { Menu, X, ChevronDown, Mic, PenLine, Gamepad2, ClipboardList, LineChart, Info, ShieldCheck, PawPrint, Settings as SettingsIcon, Coins, HeartHandshake } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ThemeToggle } from "./ui/theme-toggle";
 import { LogoMark } from "./LogoMark";
@@ -34,11 +34,13 @@ const MENU: MenuEntry[] = [
     ],
   },
   { label: "Dashboard", to: "/dashboard" },
+  { label: "Journal", to: "/journal" },
   { label: "Mango", to: "/pet" },
   {
     label: "About",
     items: [
       { title: "About Verity", description: "What Verity is and how it works.", icon: <Info className="size-5 shrink-0" />, to: "/about" },
+      { title: "Resources", description: "Helplines, caregiving guidance, and how to talk to a doctor.", icon: <HeartHandshake className="size-5 shrink-0" />, to: "/resources" },
       { title: "Privacy & Terms", description: "How your data is handled, and the terms of use.", icon: <ShieldCheck className="size-5 shrink-0" />, to: "/legal" },
     ],
   },
@@ -52,8 +54,10 @@ const MOBILE_LINKS = [
   { to: "/handwriting", label: "Handwriting test" },
   { to: "/games", label: "Games" },
   { to: "/dashboard", label: "Dashboard" },
+  { to: "/journal", label: "Journal" },
   { to: "/pet", label: "Mango (pet)" },
   { to: "/about", label: "About" },
+  { to: "/resources", label: "Resources" },
   { to: "/legal", label: "Privacy & Terms" },
   { to: "/settings", label: "Settings" },
 ];

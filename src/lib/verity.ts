@@ -1135,6 +1135,49 @@ export function historyToCsv(history: HistoryEntry[]): string {
   });
   return rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
 }
+
+/* ---------- journal ---------- */
+const LS_JOURNAL = "verity_journal";
+export type JournalMood = "great" | "okay" | "foggy" | "rough";
+export const JOURNAL_MOODS: { id: JournalMood; label: string; emoji: string }[] = [
+  { id: "great", label: "Clear & sharp", emoji: "🙂" },
+  { id: "okay", label: "Pretty normal", emoji: "😐" },
+  { id: "foggy", label: "A bit foggy", emoji: "😕" },
+  { id: "rough", label: "Rough day", emoji: "😟" },
+];
+export interface JournalEntry {
+  id: string;
+  timestamp: number;
+  mood: JournalMood;
+  note: string;
+}
+export function getJournal(): JournalEntry[] {
+  const raw = safeGet(userKey(LS_JOURNAL));
+  if (!raw) return [];
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+}
+export function addJournalEntry(mood: JournalMood, note: string): JournalEntry {
+  const full: JournalEntry = { id: Math.random().toString(36).slice(2), timestamp: Date.now(), mood, note: note.trim() };
+  const entries = getJournal();
+  entries.push(full);
+  safeSet(userKey(LS_JOURNAL), JSON.stringify(entries));
+  return full;
+}
+export function deleteJournalEntry(id: string) {
+  const entries = getJournal().filter((e) => e.id !== id);
+  safeSet(userKey(LS_JOURNAL), JSON.stringify(entries));
+}
+/** Whether the user has already logged a journal entry today, so the check-in prompt doesn't
+ *  nag someone who has already used it once today. */
+export function hasJournaledToday(): boolean {
+  const today = new Date().toDateString();
+  return getJournal().some((e) => new Date(e.timestamp).toDateString() === today);
+}
+
 export function computeTrend(history: HistoryEntry[]): { direction: "up" | "down" | "flat"; deltaPct: number } {
   if (history.length < 2) return { direction: "flat", deltaPct: 0 };
   const windowSize = Math.max(1, Math.min(3, Math.floor(history.length / 2)));
