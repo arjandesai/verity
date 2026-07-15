@@ -299,6 +299,71 @@ export function setTextScale(scale: number) {
   applyTextScale(clamped);
 }
 
+/* ---------- color themes ---------- */
+export const THEMES = [
+  { id: "default", label: "Verity", swatch: "#111111" },
+  { id: "ocean", label: "Ocean", swatch: "#0e6ba8" },
+  { id: "forest", label: "Forest", swatch: "#1f6b3f" },
+  { id: "sunset", label: "Sunset", swatch: "#c1483b" },
+  { id: "grape", label: "Grape", swatch: "#6b3fa0" },
+  { id: "rose", label: "Rose", swatch: "#c1487a" },
+] as const;
+export type ThemeId = (typeof THEMES)[number]["id"];
+const LS_COLOR_THEME = "verity_color_theme";
+export function getThemeId(): ThemeId {
+  return (safeGet(LS_COLOR_THEME) as ThemeId) || "default";
+}
+export function applyColorTheme(id: ThemeId) {
+  THEMES.forEach((t) => document.documentElement.classList.remove(`theme-${t.id}`));
+  if (id !== "default") document.documentElement.classList.add(`theme-${id}`);
+}
+export function setThemeId(id: ThemeId) {
+  safeSet(LS_COLOR_THEME, id);
+  applyColorTheme(id);
+}
+
+/* ---------- accessibility preferences ---------- */
+export interface AccessibilityPrefs {
+  reduceMotion: boolean;
+  dyslexiaFont: boolean;
+  highContrast: boolean;
+  underlineLinks: boolean;
+  largeTargets: boolean;
+}
+const LS_A11Y = "verity_a11y_prefs";
+const DEFAULT_A11Y: AccessibilityPrefs = {
+  reduceMotion: false,
+  dyslexiaFont: false,
+  highContrast: false,
+  underlineLinks: false,
+  largeTargets: false,
+};
+export function getAccessibilityPrefs(): AccessibilityPrefs {
+  const raw = safeGet(LS_A11Y);
+  if (!raw) return { ...DEFAULT_A11Y };
+  try {
+    return { ...DEFAULT_A11Y, ...JSON.parse(raw) };
+  } catch {
+    return { ...DEFAULT_A11Y };
+  }
+}
+const A11Y_CLASS: Record<keyof AccessibilityPrefs, string> = {
+  reduceMotion: "a11y-reduce-motion",
+  dyslexiaFont: "a11y-dyslexia-font",
+  highContrast: "a11y-high-contrast",
+  underlineLinks: "a11y-underline-links",
+  largeTargets: "a11y-large-targets",
+};
+export function applyAccessibilityPrefs(prefs: AccessibilityPrefs) {
+  (Object.keys(A11Y_CLASS) as (keyof AccessibilityPrefs)[]).forEach((key) => {
+    document.documentElement.classList.toggle(A11Y_CLASS[key], prefs[key]);
+  });
+}
+export function setAccessibilityPrefs(prefs: AccessibilityPrefs) {
+  safeSet(LS_A11Y, JSON.stringify(prefs));
+  applyAccessibilityPrefs(prefs);
+}
+
 /* In-memory only (never persisted to localStorage) - holds the current session's decrypted
    personal info, available only after a successful login/signup for this browser tab. */
 let sessionPersonalInfo: PersonalInfo | null = null;

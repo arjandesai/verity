@@ -31,6 +31,45 @@ html.dark{
   --text-soft:#9a9a9a;
   --border:#2a2a2a;
 }
+:root, html.dark { --border-strong: var(--text-soft); }
+
+/* ---------- color themes: recolor the accent (buttons, highlights, active states) while
+   keeping the light/dark structure untouched, so they layer on top of the existing toggle ---------- */
+html.theme-ocean{--blue-deep:#0e6ba8;--mint-deep:#0e6ba8;--lavender-deep:#0e6ba8;}
+html.theme-forest{--blue-deep:#1f6b3f;--mint-deep:#1f6b3f;--lavender-deep:#1f6b3f;}
+html.theme-sunset{--blue-deep:#c1483b;--mint-deep:#c1483b;--lavender-deep:#c1483b;}
+html.theme-grape{--blue-deep:#6b3fa0;--mint-deep:#6b3fa0;--lavender-deep:#6b3fa0;}
+html.theme-rose{--blue-deep:#c1487a;--mint-deep:#c1487a;--lavender-deep:#c1487a;}
+html.dark.theme-ocean{--blue-deep:#5ab3ec;--mint-deep:#5ab3ec;--lavender-deep:#5ab3ec;}
+html.dark.theme-forest{--blue-deep:#5cc98a;--mint-deep:#5cc98a;--lavender-deep:#5cc98a;}
+html.dark.theme-sunset{--blue-deep:#e8836f;--mint-deep:#e8836f;--lavender-deep:#e8836f;}
+html.dark.theme-grape{--blue-deep:#b48ce0;--mint-deep:#b48ce0;--lavender-deep:#b48ce0;}
+html.dark.theme-rose{--blue-deep:#e885b0;--mint-deep:#e885b0;--lavender-deep:#e885b0;}
+
+/* ---------- accessibility toggles ---------- */
+html.a11y-reduce-motion *, html.a11y-reduce-motion *::before, html.a11y-reduce-motion *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+html.a11y-dyslexia-font, html.a11y-dyslexia-font body {
+  font-family: "Comic Sans MS", "Comic Sans", Verdana, Tahoma, sans-serif !important;
+  letter-spacing: 0.02em;
+  word-spacing: 0.06em;
+}
+html.a11y-high-contrast {
+  --bg:#000 !important; --card:#000 !important; --text:#fff !important; --text-soft:#e6e6e6 !important;
+  --border:#fff !important; --border-strong:#fff !important;
+}
+html.a11y-high-contrast .card, html.a11y-high-contrast .runner-card { border-width: 2px !important; }
+html.a11y-underline-links a { text-decoration: underline !important; text-underline-offset: 3px; }
+html.a11y-large-targets .btn, html.a11y-large-targets button, html.a11y-large-targets a.btn {
+  min-height: 46px; padding-top: 14px !important; padding-bottom: 14px !important; font-size: max(15px, 1em) !important;
+}
+html.a11y-large-targets input, html.a11y-large-targets textarea, html.a11y-large-targets select {
+  min-height: 46px;
+}
 *{box-sizing:border-box;}
 html{scroll-behavior:smooth;}
 body{

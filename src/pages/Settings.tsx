@@ -1,10 +1,11 @@
 import * as React from "react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Download, Upload } from "lucide-react";
+import { Download, Upload, Check } from "lucide-react";
 import { RevealOnScroll } from "@/components/RevealOnScroll";
 import { useToast } from "@/components/Toast";
 import { ButtonHoldAndRelease } from "@/components/ui/hold-and-release-button";
+import { Switch } from "@/components/ui/material-design-3-switch";
 import {
   getUser,
   setUser,
@@ -19,6 +20,13 @@ import {
   deleteAccount,
   exportAllData,
   importAllData,
+  THEMES,
+  getThemeId,
+  setThemeId,
+  type ThemeId,
+  getAccessibilityPrefs,
+  setAccessibilityPrefs,
+  type AccessibilityPrefs,
 } from "@/lib/verity";
 
 export default function Settings() {
@@ -41,6 +49,8 @@ export default function Settings() {
   const [savingPw, setSavingPw] = useState(false);
 
   const [textScale, setTextScaleState] = useState(1);
+  const [theme, setThemeState] = useState<ThemeId>("default");
+  const [a11y, setA11yState] = useState<AccessibilityPrefs>(getAccessibilityPrefs());
 
   useEffect(() => {
     if (!user) {
@@ -52,6 +62,8 @@ export default function Settings() {
     setPhone(profile.phone || "");
     setAge(profile.age ? String(profile.age) : "");
     setTextScaleState(getTextScale());
+    setThemeState(getThemeId());
+    setA11yState(getAccessibilityPrefs());
   }, []);
 
   if (!user) return null;
@@ -117,6 +129,17 @@ export default function Settings() {
   function handleTextScale(v: number) {
     setTextScaleState(v);
     setTextScale(v);
+  }
+
+  function handleTheme(id: ThemeId) {
+    setThemeState(id);
+    setThemeId(id);
+  }
+
+  function handleA11y(key: keyof AccessibilityPrefs, value: boolean) {
+    const next = { ...a11y, [key]: value };
+    setA11yState(next);
+    setAccessibilityPrefs(next);
   }
 
   function handleBackup() {
@@ -270,6 +293,77 @@ export default function Settings() {
           </div>
           <div style={{ fontSize: 12.5, color: "var(--text-soft)", marginTop: 8 }}>
             Adjusts text size across the whole site. Currently {Math.round(textScale * 100)}%.
+          </div>
+        </div>
+      </RevealOnScroll>
+
+      <RevealOnScroll delay={0.21}>
+        <div className="card" style={{ padding: 22, marginBottom: 20 }}>
+          <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 14 }}>Theme</div>
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+            {THEMES.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => handleTheme(t.id)}
+                aria-label={`${t.label} theme`}
+                title={t.label}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: 6,
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: 4,
+                }}
+              >
+                <span
+                  style={{
+                    width: 34,
+                    height: 34,
+                    borderRadius: "50%",
+                    background: t.swatch,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    border: theme === t.id ? "3px solid var(--text)" : "1px solid var(--border)",
+                    boxSizing: "border-box",
+                  }}
+                >
+                  {theme === t.id && <Check size={15} color="#fff" />}
+                </span>
+                <span style={{ fontSize: 11.5, color: "var(--text-soft)" }}>{t.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </RevealOnScroll>
+
+      <RevealOnScroll delay={0.215}>
+        <div className="card" style={{ padding: 22, marginBottom: 20 }}>
+          <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>Accessibility</div>
+          <div style={{ fontSize: 12.5, color: "var(--text-soft)", marginBottom: 16 }}>
+            These apply across the whole site immediately, and are remembered on this device.
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {(
+              [
+                { key: "reduceMotion", label: "Reduce motion", desc: "Turns off animations and transitions site-wide." },
+                { key: "dyslexiaFont", label: "Dyslexia-friendly font", desc: "Switches body text to a more legible, evenly-spaced font." },
+                { key: "highContrast", label: "High contrast", desc: "Pure black background with white text and borders for maximum contrast." },
+                { key: "underlineLinks", label: "Underline links", desc: "Makes every link underlined, not just colored, so they're distinguishable without color." },
+                { key: "largeTargets", label: "Larger click targets", desc: "Increases the size of buttons and inputs for easier tapping and clicking." },
+              ] as { key: keyof AccessibilityPrefs; label: string; desc: string }[]
+            ).map((item) => (
+              <div key={item.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: 14 }}>{item.label}</div>
+                  <div style={{ fontSize: 12, color: "var(--text-soft)", marginTop: 2 }}>{item.desc}</div>
+                </div>
+                <Switch checked={a11y[item.key]} onCheckedChange={(v) => handleA11y(item.key, v)} haptic="light" />
+              </div>
+            ))}
           </div>
         </div>
       </RevealOnScroll>
