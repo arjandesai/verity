@@ -493,10 +493,31 @@ export function computeSpeechMetrics(samples: number[], durationSec: number): Sp
   const max = Math.max(...samples);
   const sorted = [...samples].sort((a, b) => a - b);
   const noiseFloor = sorted[Math.floor(n * 0.15)] || 0;
-  let threshold = Math.max(noiseFloor * 1.8, mean * 0.3, 0.004);
-  if (threshold >= max * 0.9) threshold = max * 0.3;
+  let globalThreshold = Math.max(noiseFloor * 1.8, mean * 0.3, 0.004);
+  if (globalThreshold >= max * 0.9) globalThreshold = max * 0.3;
 
-  const silentFlags = samples.map((s) => s < threshold);
+  // A single global threshold breaks down in a noisy real-world recording, since a loud room
+  // has a much higher noise floor for part of the clip than another part (a crowd surge, a
+  // passing car, a burst of chatter). Instead, recompute a local threshold in ~1.5s windows
+  // around each sample from that window's own 15th percentile, so the "what counts as silence"
+  // bar tracks the ambient noise level as it changes through the recording rather than one
+  // fixed number that a loud environment would blow through everywhere at once.
+  const samplesPerSecForWindow = durationSec > 0 ? n / durationSec : 0;
+  const windowRadius = Math.max(4, Math.round(samplesPerSecForWindow * 0.75));
+  const silentFlags = samples.map((s, i) => {
+    const lo = Math.max(0, i - windowRadius);
+    const hi = Math.min(n, i + windowRadius);
+    const windowSlice = samples.slice(lo, hi);
+    const windowSorted = [...windowSlice].sort((a, b) => a - b);
+    const windowNoiseFloor = windowSorted[Math.floor(windowSlice.length * 0.15)] || 0;
+    const windowMean = windowSlice.reduce((a, b) => a + b, 0) / windowSlice.length;
+    let localThreshold = Math.max(windowNoiseFloor * 1.8, windowMean * 0.3, 0.004);
+    // Blend with the global threshold so a very short, unusually quiet or loud window doesn't
+    // swing wildly on its own - the local window adapts to sustained noise, the global value
+    // keeps it anchored to the recording as a whole.
+    localThreshold = localThreshold * 0.65 + globalThreshold * 0.35;
+    return s < localThreshold;
+  });
   const silentCount = silentFlags.filter(Boolean).length;
   const silenceRatio = silentCount / n;
   const speakingRatio = 1 - silenceRatio;
@@ -1039,6 +1060,20 @@ function buildGeminiSpeechPrompt(expectedText: string | undefined, language: Spe
     "non-clinical screening demo (not a diagnosis) that looks for speech patterns sometimes associated with cognitive " +
     `decline. The expected spoken language is ${langName}. ` +
     target +
+    "This recording may have been made in a noisy real-world environment - background chatter, a crowd, music, " +
+    "traffic, or general ambient noise may be present alongside the speaker. Identify the primary speaker (the " +
+    "person actually reading the passage, usually the loudest and most consistent voice) and evaluate ONLY that " +
+    "person's speech. Treat other voices, crowd noise, and background sound as noise to see past, not as part of " +
+    "the primary speaker's performance - do not count silence-masked-by-noise, or moments where you can only hear " +
+    "background sound instead of the primary speaker, as evidence of poor fluency or word-finding difficulty on " +
+    "its own; only score based on patterns actually audible in the primary speaker's own voice. If background noise " +
+    "makes it genuinely too hard to judge the primary speaker's speech patterns at all, reflect that with a lower " +
+    '"confidence" score rather than guessing. ' +
+    "The speaker may have any regional or non-native accent, dialect, or pronunciation style - accent itself is " +
+    "never a sign of cognitive decline and must never lower any score. Judge fluency, pauses, word-finding, and " +
+    "coherence based on hesitation, timing, and structure, not on how words are pronounced or which dialect/accent " +
+    "is used. A confident, fluent reading in a strong accent should score just as well as the same fluent reading " +
+    "in any other accent. " +
     "First, confirm the clip actually contains audible human speech - not silence, not pure background noise/music, " +
     'and not an unrelated sound. If it does NOT contain real speech, set "containsSpeech" to false, set every numeric ' +
     'field to 0, and explain what you actually heard in "notes". Do not invent scores for a clip with no real speech ' +
@@ -1052,7 +1087,7 @@ function buildGeminiSpeechPrompt(expectedText: string | undefined, language: Spe
     "coherence (100 = clear, on-topic, and easy to follow; lower for rambling, repetition, or disorganized speech). " +
     "Do not soften these scores out of politeness - if the pauses are long and frequent, pauseSeverity should be " +
     'high, even if the person eventually gets every word out correctly. Also include a 0-100 "confidence" reflecting ' +
-    "how confident you are in this reading given audio quality and clarity. " +
+    "how confident you are in this reading given audio quality, background noise, and clarity. " +
     "Respond with ONLY raw JSON, no markdown fences, no extra commentary, in exactly this shape: " +
     '{"containsSpeech":true|false,"matchesExpectedText":true|false,"transcription":"your best-effort transcription ' +
     'of what was said, or an empty string if none","confidence":0-100,"fluency":0-100,"pauseSeverity":0-100,' +

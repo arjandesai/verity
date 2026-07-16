@@ -258,15 +258,48 @@ export default function Speech() {
     setError("");
     setMetrics(null);
     setAudioUrl(null);
+
+    if (!window.isSecureContext) {
+      setError("Microphone access requires a secure connection (https). This page isn't loading over https, so the browser is blocking it.");
+      return;
+    }
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setError("This browser doesn't support microphone recording. Try a recent version of Chrome, Safari, or Firefox.");
+      return;
+    }
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+      });
       streamRef.current = stream;
       const audioCtx = new AudioContext();
       audioCtxRef.current = audioCtx;
       const source = audioCtx.createMediaStreamSource(stream);
+
+      // Cuts low-frequency rumble (traffic, HVAC, handling noise, crowd murmur) before either
+      // the live visualizer or the actual recorded audio sees it - genuine noise reduction on
+      // the signal itself, not just a scoring adjustment after the fact.
+      const highpass = audioCtx.createBiquadFilter();
+      highpass.type = "highpass";
+      highpass.frequency.value = 120;
+      highpass.Q.value = 0.7;
+
+      // Gentle compression narrows the gap between quiet speech and loud background bursts,
+      // so a sudden noise spike doesn't dominate the recording relative to the speaker's voice.
+      const compressor = audioCtx.createDynamicsCompressor();
+      compressor.threshold.value = -32;
+      compressor.knee.value = 18;
+      compressor.ratio.value = 6;
+      compressor.attack.value = 0.006;
+      compressor.release.value = 0.15;
+
+      source.connect(highpass);
+      highpass.connect(compressor);
+
       const analyser = audioCtx.createAnalyser();
       analyser.fftSize = 2048;
-      source.connect(analyser);
+      compressor.connect(analyser);
       analyserRef.current = analyser;
       samplesRef.current = [];
 
@@ -284,7 +317,13 @@ export default function Speech() {
       }
       sample();
 
-      const mr = new MediaRecorder(stream);
+      // The MediaRecorder captures the filtered+compressed signal (via this destination node),
+      // not the raw microphone stream - so the actual audio file sent to Gemini/the trained
+      // model backend is the cleaned-up version too, not just the on-screen visualizer.
+      const destination = audioCtx.createMediaStreamDestination();
+      compressor.connect(destination);
+
+      const mr = new MediaRecorder(destination.stream);
       mediaRecorderRef.current = mr;
       chunksRef.current = [];
       mr.ondataavailable = (e) => chunksRef.current.push(e.data);
@@ -305,8 +344,17 @@ export default function Speech() {
         const avg = recent.length ? recent.reduce((a, b) => a + b, 0) / recent.length : 0;
         setLevels((prev) => [...prev.slice(1), Math.min(1, avg * 6)]);
       }, 120);
-    } catch {
-      setError("Couldn't access your microphone. Please check permissions and try again.");
+    } catch (err) {
+      const name = err instanceof DOMException ? err.name : "";
+      if (name === "NotAllowedError" || name === "SecurityError") {
+        setError("Microphone access was blocked. Check your browser's site settings and allow microphone access for this page, then try again.");
+      } else if (name === "NotFoundError" || name === "OverconstrainedError") {
+        setError("No microphone was found on this device. Plug one in, or check your system's sound settings, then try again.");
+      } else if (name === "NotReadableError") {
+        setError("Your microphone is already in use by another app or tab. Close it and try again.");
+      } else {
+        setError(`Couldn't access your microphone${name ? ` (${name})` : ""}. Please check permissions and try again.`);
+      }
     }
   }
 
