@@ -5,12 +5,14 @@ import type { Difficulty } from "@/components/LevelBar";
 
 const ROUNDS = 6;
 const COLOR_NAMES = ["Red", "Blue", "Green", "Purple", "Orange"];
+// Bright, fully-saturated colors so each one reads unmistakably as its own hue at a glance,
+// rather than the site's muted/desaturated palette which made them harder to tell apart.
 const COLOR_HEX: Record<string, string> = {
-  Red: "#b23b3b",
-  Blue: "#3b5fb2",
-  Green: "#3b8a4e",
-  Purple: "#7a3bb2",
-  Orange: "#c07a2c",
+  Red: "#ef2b2b",
+  Blue: "#1e6bf0",
+  Green: "#16a34a",
+  Purple: "#9333ea",
+  Orange: "#f97316",
 };
 
 // Higher difficulty uses more color options and a higher chance the word and ink color disagree
@@ -103,17 +105,44 @@ export function StroopMatch({ difficulty, onWin }: { difficulty: Difficulty; onW
       </p>
       <p className="text-text-soft" style={{ marginBottom: 10, fontSize: 13 }}>What color is this word printed in?</p>
       <h3 style={{ fontSize: 40, fontWeight: 800, marginBottom: 22, color: COLOR_HEX[current.inkColor] }}>{current.word}</h3>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "center" }}>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 12, justifyContent: "center" }}>
         {choices.map((c) => {
           const isCorrect = c === current.inkColor;
           const showState = selected !== null;
+          const wasWrongPick = showState && selected === c && !isCorrect;
+          const hex = COLOR_HEX[c];
           return (
             <button
               key={c}
-              className={`word-chip ${showState && isCorrect ? "hit" : ""} ${showState && selected === c && !isCorrect ? "miss" : ""}`}
-              style={{ cursor: selected !== null ? "default" : "pointer", fontSize: 14 }}
               onClick={() => handleChoice(c)}
+              disabled={selected !== null}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "10px 18px 10px 12px",
+                borderRadius: 999,
+                fontSize: 14,
+                fontWeight: 700,
+                cursor: selected !== null ? "default" : "pointer",
+                background: hex,
+                color: "#fff",
+                border: showState && isCorrect ? "3px solid #111" : "3px solid transparent",
+                opacity: wasWrongPick ? 0.45 : 1,
+                boxShadow: showState && isCorrect ? "0 0 0 3px rgba(0,0,0,0.08)" : "0 2px 6px rgba(0,0,0,0.15)",
+                transition: "opacity 0.2s ease, border-color 0.2s ease",
+              }}
             >
+              <span
+                style={{
+                  width: 14,
+                  height: 14,
+                  borderRadius: "50%",
+                  background: "#fff",
+                  opacity: 0.9,
+                  flexShrink: 0,
+                }}
+              />
               {c}
             </button>
           );

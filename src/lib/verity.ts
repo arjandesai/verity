@@ -1063,12 +1063,13 @@ function buildGeminiSpeechPrompt(expectedText: string | undefined, language: Spe
     "This recording may have been made in a noisy real-world environment - background chatter, a crowd, music, " +
     "traffic, or general ambient noise may be present alongside the speaker. Identify the primary speaker (the " +
     "person actually reading the passage, usually the loudest and most consistent voice) and evaluate ONLY that " +
-    "person's speech. Treat other voices, crowd noise, and background sound as noise to see past, not as part of " +
-    "the primary speaker's performance - do not count silence-masked-by-noise, or moments where you can only hear " +
-    "background sound instead of the primary speaker, as evidence of poor fluency or word-finding difficulty on " +
-    "its own; only score based on patterns actually audible in the primary speaker's own voice. If background noise " +
-    "makes it genuinely too hard to judge the primary speaker's speech patterns at all, reflect that with a lower " +
-    '"confidence" score rather than guessing. ' +
+    "person's speech. Other people's voices and background sound are noise to see past when judging what words " +
+    "were said - but a real gap of silence during the primary speaker's OWN turn (them stopping, hesitating, or " +
+    "going quiet mid-sentence) is a genuine pause and must be scored as one regardless of how noisy or quiet the " +
+    "background is; do not excuse or discount an actual pause just because the recording is noisy. Only if " +
+    "background noise makes it genuinely impossible to tell whether the primary speaker was talking or silent at a " +
+    "given moment should you treat that specific moment as ambiguous rather than counting it either way, and " +
+    'reflect any such difficulty with a lower overall "confidence" score rather than guessing. ' +
     "The speaker may have any regional or non-native accent, dialect, or pronunciation style - accent itself is " +
     "never a sign of cognitive decline and must never lower any score. Judge fluency, pauses, word-finding, and " +
     "coherence based on hesitation, timing, and structure, not on how words are pronounced or which dialect/accent " +

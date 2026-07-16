@@ -280,26 +280,20 @@ export default function Speech() {
       // Cuts low-frequency rumble (traffic, HVAC, handling noise, crowd murmur) before either
       // the live visualizer or the actual recorded audio sees it - genuine noise reduction on
       // the signal itself, not just a scoring adjustment after the fact.
+      // NOTE: a dynamics compressor was here too, but it actively boosted quiet sections
+      // (including real pauses/silence) up toward audibility, which made genuine pauses read as
+      // speech to both the local pause-detector and Gemini - it was silently wrecking scores
+      // (everything reading as near-perfect fluency), so it's removed. High-pass alone is safe.
       const highpass = audioCtx.createBiquadFilter();
       highpass.type = "highpass";
       highpass.frequency.value = 120;
       highpass.Q.value = 0.7;
 
-      // Gentle compression narrows the gap between quiet speech and loud background bursts,
-      // so a sudden noise spike doesn't dominate the recording relative to the speaker's voice.
-      const compressor = audioCtx.createDynamicsCompressor();
-      compressor.threshold.value = -32;
-      compressor.knee.value = 18;
-      compressor.ratio.value = 6;
-      compressor.attack.value = 0.006;
-      compressor.release.value = 0.15;
-
       source.connect(highpass);
-      highpass.connect(compressor);
 
       const analyser = audioCtx.createAnalyser();
       analyser.fftSize = 2048;
-      compressor.connect(analyser);
+      highpass.connect(analyser);
       analyserRef.current = analyser;
       samplesRef.current = [];
 
@@ -321,7 +315,7 @@ export default function Speech() {
       // not the raw microphone stream - so the actual audio file sent to Gemini/the trained
       // model backend is the cleaned-up version too, not just the on-screen visualizer.
       const destination = audioCtx.createMediaStreamDestination();
-      compressor.connect(destination);
+      highpass.connect(destination);
 
       const mr = new MediaRecorder(destination.stream);
       mediaRecorderRef.current = mr;
