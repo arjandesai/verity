@@ -269,9 +269,11 @@ export default function Speech() {
     }
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-      });
+      // Plain `audio: true` rather than a constraint object - some browsers/devices reject or
+      // behave inconsistently with echoCancellation/noiseSuppression/autoGainControl constraints,
+      // which risks the mic failing to start at all. Not worth it for a marginal gain when the
+      // high-pass filter below already handles the main noise problem.
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
       const audioCtx = new AudioContext();
       audioCtxRef.current = audioCtx;
