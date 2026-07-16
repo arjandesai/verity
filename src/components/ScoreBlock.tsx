@@ -137,8 +137,30 @@ export function ScoreBlock({ probability, band, modality, age, previousProbabili
             }}
           >
             {usedAi ? <Sparkles size={11} /> : <Cpu size={11} />}
-            {usedAi ? `AI-assisted${aiConfidence != null ? ` · ${confLabel} (${aiConfidence}/100)` : ""}` : "On-device estimate"}
+            {usedAi ? "AI-assisted" : "On-device estimate"}
           </span>
+        </div>
+      )}
+      {usedAi && aiConfidence != null && (
+        <div style={{ maxWidth: 280, margin: "0 auto 14px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 5 }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: confColor }}>AI confidence: {aiConfidence}%</span>
+            <span style={{ fontSize: 11, color: "var(--text-soft)" }}>{confLabel}</span>
+          </div>
+          <div style={{ height: 8, borderRadius: 999, background: "var(--blue)", border: "1px solid var(--border)", overflow: "hidden" }}>
+            <div
+              style={{
+                height: "100%",
+                width: `${aiConfidence}%`,
+                background: confColor,
+                borderRadius: 999,
+                transition: "width 0.4s ease",
+              }}
+            />
+          </div>
+          <div style={{ fontSize: 10.5, color: "var(--text-soft)", marginTop: 4 }}>
+            How confident the AI was in its reading of your sample - not the score itself.
+          </div>
         </div>
       )}
       <div className="score-num" style={{ color: bandColor(band) }}>
