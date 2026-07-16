@@ -728,6 +728,59 @@ export function setGeminiKey(key: string) {
   safeSet(LS_GEMINI_KEY, key);
 }
 
+/* ---------- real trained speech model (self-hosted backend) ----------
+   Separate from the Gemini pathway: this calls a server you run yourself
+   (see /backend in the repo) that loads the actual scikit-learn model
+   trained on the EWA-DB dataset and scores real openSMILE eGeMAPSv02
+   features extracted from your recording - not a heuristic and not an
+   LLM guess. Optional; leave the URL unset to keep using Gemini/local. */
+const LS_SPEECH_BACKEND_URL = "verity_speech_backend_url";
+export function getSpeechBackendUrl(): string {
+  return safeGet(LS_SPEECH_BACKEND_URL) || "";
+}
+export function setSpeechBackendUrl(url: string) {
+  safeSet(LS_SPEECH_BACKEND_URL, url.trim().replace(/\/+$/, ""));
+}
+
+export interface TrainedModelResult {
+  ok: true;
+  probability: number;
+  label: string;
+  modelAuc: number;
+  dataset: string;
+}
+export interface TrainedModelError {
+  ok: false;
+  reason: string;
+}
+export async function predictSpeechWithTrainedModel(
+  audio: File | Blob,
+  backendUrl: string
+): Promise<TrainedModelResult | TrainedModelError> {
+  try {
+    const form = new FormData();
+    form.append("file", audio, "recording.webm");
+    const res = await fetch(`${backendUrl}/predict/speech`, { method: "POST", body: form });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      return { ok: false, reason: `Backend returned an error (${res.status}). ${text.slice(0, 200)}` };
+    }
+    const data = await res.json();
+    if (typeof data.probability !== "number") {
+      return { ok: false, reason: "Backend response didn't include a probability." };
+    }
+    return {
+      ok: true,
+      probability: Math.max(0, Math.min(1, data.probability)),
+      label: data.label || "",
+      modelAuc: data.model_auc ?? 0.894,
+      dataset: data.dataset || "EWA-DB",
+    };
+  } catch (err) {
+    return { ok: false, reason: "Couldn't reach the model backend - check the URL and that the server is running." };
+  }
+}
+
 function buildGeminiPrompt(expectedText?: string): string {
   const target = expectedText
     ? `The person was asked to write this exact sentence: "${expectedText}". Read every word in the image as carefully ` +

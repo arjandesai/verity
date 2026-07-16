@@ -24,6 +24,10 @@ interface ScoreBlockProps {
    *  the AI-assisted one - shown as a small source marker either way, so it's always clear which
    *  scoring method produced a given result. */
   usedAi?: boolean;
+  /** Overrides the small source badge's text/tooltip - used for the real trained-model backend
+   *  pathway, which is neither the Gemini AI path nor the plain local heuristic. */
+  sourceLabel?: string;
+  sourceDetail?: string;
 }
 
 /** Converts a 0-1 probability into a friendlier 1-10 scale, 1 = very low, 10 = very high. */
@@ -58,7 +62,7 @@ export function verdictFor(band: Band): { label: string; note: string; icon: typ
   };
 }
 
-export function ScoreBlock({ probability, band, modality, age, previousProbability, aiConfidence, usedAi }: ScoreBlockProps) {
+export function ScoreBlock({ probability, band, modality, age, previousProbability, aiConfidence, usedAi, sourceLabel, sourceDetail }: ScoreBlockProps) {
   const pct = Math.round(probability * 100);
   const scale = scaleOf10(probability);
   const verdict = verdictFor(band);
@@ -115,13 +119,14 @@ export function ScoreBlock({ probability, band, modality, age, previousProbabili
         <Icon size={18} />
         {verdict.label}
       </div>
-      {usedAi !== undefined && (
+      {(usedAi !== undefined || sourceLabel) && (
         <div style={{ marginBottom: 10 }}>
           <span
             title={
-              usedAi
+              sourceDetail ||
+              (usedAi
                 ? "This result was scored by an AI model reading your actual sample, rather than timing/geometry heuristics alone."
-                : "This result was scored entirely on-device from timing and steadiness signals, without an AI model."
+                : "This result was scored entirely on-device from timing and steadiness signals, without an AI model.")
             }
             style={{
               display: "inline-flex",
@@ -129,15 +134,15 @@ export function ScoreBlock({ probability, band, modality, age, previousProbabili
               gap: 5,
               fontSize: 11.5,
               fontWeight: 700,
-              color: usedAi ? confColor : "var(--text-soft)",
+              color: sourceLabel ? "#3f6fb0" : usedAi ? confColor : "var(--text-soft)",
               background: "var(--bg)",
-              border: `1px solid ${usedAi ? confColor + "55" : "var(--border)"}`,
+              border: `1px solid ${sourceLabel ? "#3f6fb055" : usedAi ? confColor + "55" : "var(--border)"}`,
               borderRadius: 999,
               padding: "3px 10px",
             }}
           >
-            {usedAi ? <Sparkles size={11} /> : <Cpu size={11} />}
-            {usedAi ? "AI-assisted" : "On-device estimate"}
+            {sourceLabel ? <Cpu size={11} /> : usedAi ? <Sparkles size={11} /> : <Cpu size={11} />}
+            {sourceLabel || (usedAi ? "AI-assisted" : "On-device estimate")}
           </span>
         </div>
       )}

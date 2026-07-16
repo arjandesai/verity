@@ -27,6 +27,8 @@ import {
   getAccessibilityPrefs,
   setAccessibilityPrefs,
   type AccessibilityPrefs,
+  getSpeechBackendUrl,
+  setSpeechBackendUrl,
 } from "@/lib/verity";
 
 export default function Settings() {
@@ -50,6 +52,8 @@ export default function Settings() {
 
   const [textScale, setTextScaleState] = useState(1);
   const [theme, setThemeState] = useState<ThemeId>("default");
+  const [speechBackendUrl, setSpeechBackendUrlState] = useState("");
+  const [savingBackend, setSavingBackend] = useState(false);
   const [a11y, setA11yState] = useState<AccessibilityPrefs>(getAccessibilityPrefs());
 
   useEffect(() => {
@@ -64,6 +68,7 @@ export default function Settings() {
     setTextScaleState(getTextScale());
     setThemeState(getThemeId());
     setA11yState(getAccessibilityPrefs());
+    setSpeechBackendUrlState(getSpeechBackendUrl());
   }, []);
 
   if (!user) return null;
@@ -140,6 +145,14 @@ export default function Settings() {
     const next = { ...a11y, [key]: value };
     setA11yState(next);
     setAccessibilityPrefs(next);
+  }
+
+  function saveSpeechBackend(e: React.FormEvent) {
+    e.preventDefault();
+    setSavingBackend(true);
+    setSpeechBackendUrl(speechBackendUrl);
+    setSavingBackend(false);
+    showToast(speechBackendUrl ? "Speech model backend saved." : "Speech model backend cleared - back to Gemini/local scoring.");
   }
 
   function handleBackup() {
@@ -366,6 +379,36 @@ export default function Settings() {
             ))}
           </div>
         </div>
+      </RevealOnScroll>
+
+      <RevealOnScroll delay={0.218}>
+        <form onSubmit={saveSpeechBackend} className="card" style={{ padding: 22, marginBottom: 20 }}>
+          <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 6 }}>Speech model backend (advanced)</div>
+          <div style={{ fontSize: 12.5, color: "var(--text-soft)", marginBottom: 14, lineHeight: 1.5 }}>
+            Optional. Points the speech test at a real, trained scikit-learn model (logistic regression, trained on the
+            EWA-DB dataset, 62 openSMILE eGeMAPSv02 features, validated AUC 0.894) instead of Gemini or the local
+            heuristic. Requires running the backend in the repo's <code>/backend</code> folder yourself - see its
+            README. Leave blank to keep using Gemini/local scoring.
+          </div>
+          <input
+            value={speechBackendUrl}
+            onChange={(e) => setSpeechBackendUrlState(e.target.value)}
+            placeholder="https://your-backend.onrender.com"
+            style={{
+              width: "100%",
+              padding: "10px 14px",
+              borderRadius: 10,
+              border: "1px solid var(--border)",
+              background: "var(--bg)",
+              color: "var(--text)",
+              fontSize: 14,
+              marginBottom: 14,
+            }}
+          />
+          <button className="btn btn-primary" type="submit" disabled={savingBackend} style={{ alignSelf: "flex-start" }}>
+            Save
+          </button>
+        </form>
       </RevealOnScroll>
 
       <RevealOnScroll delay={0.22}>

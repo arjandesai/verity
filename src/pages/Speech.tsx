@@ -22,6 +22,8 @@ import {
   SPEECH_LANGUAGES,
   getUser,
   getUserProfile,
+  getSpeechBackendUrl,
+  predictSpeechWithTrainedModel,
   type SpeechMetrics,
   type Band,
   type SpeechLanguageCode,
@@ -227,6 +229,7 @@ export default function Speech() {
   const [seconds, setSeconds] = useState(0);
   const [metrics, setMetrics] = useState<SpeechMetrics | null>(null);
   const [geminiAnalysis, setGeminiAnalysis] = useState<GeminiSpeechAnalysis | null>(null);
+  const [trainedModelInfo, setTrainedModelInfo] = useState<{ modelAuc: number; dataset: string } | null>(null);
   const [probability, setProbability] = useState(0);
   const [band, setBand] = useState<Band>("typical");
   const [prevProbability] = useState<number | undefined>(() => {
@@ -351,6 +354,36 @@ export default function Speech() {
       return;
     }
 
+    const backendUrl = getSpeechBackendUrl();
+    if (backendUrl && lastBlobRef.current) {
+      setBusy(true);
+      const result = await predictSpeechWithTrainedModel(lastBlobRef.current, backendUrl);
+      setBusy(false);
+      if (result.ok) {
+        const b = bandFor(result.probability);
+        setGeminiAnalysis(null);
+        setMetrics(null);
+        setTrainedModelInfo({ modelAuc: result.modelAuc, dataset: result.dataset });
+        setProbability(result.probability);
+        setBand(b);
+        addHistoryEntry({
+          modality: "speech",
+          probability: result.probability,
+          band: b,
+          metrics: { trainedModel: true, modelAuc: result.modelAuc, dataset: result.dataset, label: result.label },
+        });
+        markDailyActivity("speech");
+        setStage("done");
+        setLevels(Array(24).fill(0));
+        return;
+      }
+      // Falls through to Gemini/local below if the backend call failed, so a misconfigured or
+      // sleeping backend doesn't strand the user without a result.
+      if (result.ok === false) {
+        setError(`Model backend: ${result.reason} Falling back to standard scoring.`);
+      }
+    }
+
     if (apiKey && lastBlobRef.current) {
       setBusy(true);
       const result = await analyzeSpeechAudio(lastBlobRef.current, apiKey, passage, language);
@@ -364,6 +397,7 @@ export default function Speech() {
       const p = probabilityFromGeminiSpeechAnalysis(result.analysis);
       const b = bandFor(p);
       setGeminiAnalysis(result.analysis);
+      setTrainedModelInfo(null);
       setMetrics(null);
       setProbability(p);
       setBand(b);
@@ -374,6 +408,7 @@ export default function Speech() {
       return;
     }
 
+    setTrainedModelInfo(null);
     const m = computeSpeechMetrics(samples, durationSec);
     const p = probabilityFromSpeechMetrics(m);
     const b = bandFor(p);
@@ -393,6 +428,34 @@ export default function Speech() {
   async function analyzeUploadedAudio(file: File) {
     setError("");
     setGeminiAnalysis(null);
+    setTrainedModelInfo(null);
+
+    const backendUrl = getSpeechBackendUrl();
+    if (backendUrl) {
+      setBusy(true);
+      const result = await predictSpeechWithTrainedModel(file, backendUrl);
+      setBusy(false);
+      if (result.ok) {
+        const b = bandFor(result.probability);
+        setTrainedModelInfo({ modelAuc: result.modelAuc, dataset: result.dataset });
+        setMetrics(null);
+        setProbability(result.probability);
+        setBand(b);
+        setAudioUrl(URL.createObjectURL(file));
+        addHistoryEntry({
+          modality: "speech",
+          probability: result.probability,
+          band: b,
+          metrics: { trainedModel: true, modelAuc: result.modelAuc, dataset: result.dataset, label: result.label },
+        });
+        markDailyActivity("speech");
+        setStage("done");
+        return;
+      }
+      if (result.ok === false) {
+        setError(`Model backend: ${result.reason} Falling back to standard scoring.`);
+      }
+    }
 
     if (apiKey) {
       setBusy(true);
@@ -578,7 +641,7 @@ export default function Speech() {
             </p>
           )}
 
-          {stage === "done" && (metrics || geminiAnalysis) && (
+          {stage === "done" && (metrics || geminiAnalysis || trainedModelInfo) && (
             <div>
               <ScoreBlock
                 probability={probability}
@@ -589,16 +652,31 @@ export default function Speech() {
                   return u ? getUserProfile(u.username).age : undefined;
                 })()}
                 previousProbability={prevProbability}
+                sourceLabel={trainedModelInfo ? "Trained ML model" : undefined}
+                sourceDetail={
+                  trainedModelInfo
+                    ? `A real logistic regression model trained on the ${trainedModelInfo.dataset} dataset (validated AUC ${trainedModelInfo.modelAuc}), scored from real openSMILE acoustic features extracted from your recording.`
+                    : undefined
+                }
                 usedAi={!!geminiAnalysis}
                 aiConfidence={geminiAnalysis?.confidence ?? null}
               />
-              {metrics && !geminiAnalysis && (
+              {metrics && !geminiAnalysis && !trainedModelInfo && (
                 <BreakdownGrid
                   items={[
                     { value: `${metrics.estWordsPerMin} wpm`, label: "How fast you spoke", note: "Words per minute - most people fall between 110–160." },
                     { value: `${Math.round(metrics.silenceRatio * 100)}%`, label: "Quiet time", note: "How much of the recording had no speech in it." },
                     { value: `${metrics.pauseCount}`, label: "Longer pauses", note: "Pauses lasting more than a quarter-second." },
                     { value: `${metrics.durationSec.toFixed(1)}s`, label: "Total time", note: "How long your recording lasted." },
+                  ]}
+                />
+              )}
+              {trainedModelInfo && (
+                <BreakdownGrid
+                  items={[
+                    { value: trainedModelInfo.dataset, label: "Training dataset", note: "What the model was trained and validated on." },
+                    { value: `${trainedModelInfo.modelAuc}`, label: "Validated AUC", note: "The model's measured accuracy during training, not a live measure of this result." },
+                    { value: "eGeMAPSv02", label: "Feature set", note: "62 real openSMILE acoustic features extracted from your recording." },
                   ]}
                 />
               )}
