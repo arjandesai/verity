@@ -95,6 +95,8 @@ export default function Handwriting() {
   }
 
   function handlePointerDown(e: React.PointerEvent<HTMLCanvasElement>) {
+    e.preventDefault();
+    canvasRef.current?.setPointerCapture(e.pointerId);
     drawing.current = true;
     lastPoint.current = null; // reset so between-stroke gaps aren't counted as hesitations
     strokeCount.current += 1;
@@ -110,6 +112,7 @@ export default function Handwriting() {
   }
   function handlePointerMove(e: React.PointerEvent<HTMLCanvasElement>) {
     if (!drawing.current) return;
+    e.preventDefault();
     const p = getPos(e);
     if (lastPoint.current && p.t - lastPoint.current.t > 400) {
       pauseCount.current += 1;
@@ -281,16 +284,35 @@ export default function Handwriting() {
           {error && <div style={{ color: "var(--text)", fontWeight: 700, fontSize: 13.5, marginBottom: 16, borderLeft: "3px solid var(--text)", paddingLeft: 10 }}>{error}</div>}
 
           {!done && mode === "draw" && (
-            <div>
+            <div
+              style={{
+                touchAction: "none",
+                WebkitUserSelect: "none",
+                userSelect: "none",
+                WebkitTouchCallout: "none",
+              } as React.CSSProperties}
+            >
               <canvas
                 ref={canvasRef}
                 width={560}
                 height={200}
-                style={{ width: "100%", height: 200, border: "1px solid var(--border)", borderRadius: 12, background: "#fff", touchAction: "none" }}
+                style={{
+                  width: "100%",
+                  height: 200,
+                  border: "1px solid var(--border)",
+                  borderRadius: 12,
+                  background: "#fff",
+                  touchAction: "none",
+                  WebkitUserSelect: "none",
+                  userSelect: "none",
+                  WebkitTouchCallout: "none",
+                  display: "block",
+                } as React.CSSProperties}
                 onPointerDown={handlePointerDown}
                 onPointerMove={handlePointerMove}
                 onPointerUp={handlePointerUp}
                 onPointerLeave={handlePointerUp}
+                onContextMenu={(e) => e.preventDefault()}
               />
               <div style={{ display: "flex", gap: 10, justifyContent: "center", marginTop: 16 }}>
                 <button className="btn btn-secondary" onClick={clearCanvas}>

@@ -589,6 +589,8 @@ export default function Speech() {
                   return u ? getUserProfile(u.username).age : undefined;
                 })()}
                 previousProbability={prevProbability}
+                usedAi={!!geminiAnalysis}
+                aiConfidence={geminiAnalysis?.confidence ?? null}
               />
               {metrics && !geminiAnalysis && (
                 <BreakdownGrid

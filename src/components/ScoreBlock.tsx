@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useState } from "react";
-import { CheckCircle2, AlertTriangle, AlertCircle, Copy, Check, TrendingDown, TrendingUp, Minus } from "lucide-react";
+import { CheckCircle2, AlertTriangle, AlertCircle, Copy, Check, TrendingDown, TrendingUp, Minus, Sparkles, Cpu } from "lucide-react";
 import { bandClass, bandColor, bandLabel, compareToAgeNorm, type Band } from "@/lib/verity";
 
 interface ScoreBlockProps {
@@ -15,6 +15,15 @@ interface ScoreBlockProps {
   /** The probability from the user's previous test of the same modality, if any - shows a small
    *  "vs your last test" delta so a single result can be read in context of their own trend. */
   previousProbability?: number;
+  /** 0-100 confidence from the AI-assisted (Gemini) scoring pathway, reflecting how confident
+   *  the model was in its own reading of the sample (audio/handwriting clarity, not the score
+   *  itself). Omit for the local, on-device heuristic pathway, which shows a plainer marker
+   *  instead since it doesn't have a comparable self-reported confidence value. */
+  aiConfidence?: number | null;
+  /** True when this result came from the local, on-device signal-analysis pathway rather than
+   *  the AI-assisted one - shown as a small source marker either way, so it's always clear which
+   *  scoring method produced a given result. */
+  usedAi?: boolean;
 }
 
 /** Converts a 0-1 probability into a friendlier 1-10 scale, 1 = very low, 10 = very high. */
@@ -49,7 +58,7 @@ export function verdictFor(band: Band): { label: string; note: string; icon: typ
   };
 }
 
-export function ScoreBlock({ probability, band, modality, age, previousProbability }: ScoreBlockProps) {
+export function ScoreBlock({ probability, band, modality, age, previousProbability, aiConfidence, usedAi }: ScoreBlockProps) {
   const pct = Math.round(probability * 100);
   const scale = scaleOf10(probability);
   const verdict = verdictFor(band);
@@ -57,6 +66,8 @@ export function ScoreBlock({ probability, band, modality, age, previousProbabili
   const [copied, setCopied] = useState(false);
   const ageComparison = age ? compareToAgeNorm(probability, age) : null;
   const deltaPts = previousProbability != null ? Math.round((probability - previousProbability) * 100) : null;
+  const confColor = aiConfidence == null ? "var(--text-soft)" : aiConfidence >= 70 ? "#3b8a4e" : aiConfidence >= 40 ? "#c98a2e" : "#b23b3b";
+  const confLabel = aiConfidence == null ? "" : aiConfidence >= 70 ? "High confidence" : aiConfidence >= 40 ? "Moderate confidence" : "Low confidence";
 
   async function copySummary() {
     const date = new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
@@ -69,6 +80,11 @@ export function ScoreBlock({ probability, band, modality, age, previousProbabili
       (deltaPts !== null
         ? `${deltaPts === 0 ? "Same as your last test" : `${Math.abs(deltaPts)}% ${deltaPts < 0 ? "better" : "higher"} than your last test`}\n`
         : "") +
+      (usedAi
+        ? `Scoring method: AI-assisted${aiConfidence != null ? ` (${confLabel.toLowerCase()}, ${aiConfidence}/100)` : ""}\n`
+        : usedAi === false
+          ? "Scoring method: on-device signal analysis\n"
+          : "") +
       `\nThis is from a non-clinical screening demo, not a medical diagnosis.`;
     try {
       await navigator.clipboard.writeText(text);
@@ -99,6 +115,32 @@ export function ScoreBlock({ probability, band, modality, age, previousProbabili
         <Icon size={18} />
         {verdict.label}
       </div>
+      {usedAi !== undefined && (
+        <div style={{ marginBottom: 10 }}>
+          <span
+            title={
+              usedAi
+                ? "This result was scored by an AI model reading your actual sample, rather than timing/geometry heuristics alone."
+                : "This result was scored entirely on-device from timing and steadiness signals, without an AI model."
+            }
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 5,
+              fontSize: 11.5,
+              fontWeight: 700,
+              color: usedAi ? confColor : "var(--text-soft)",
+              background: "var(--bg)",
+              border: `1px solid ${usedAi ? confColor + "55" : "var(--border)"}`,
+              borderRadius: 999,
+              padding: "3px 10px",
+            }}
+          >
+            {usedAi ? <Sparkles size={11} /> : <Cpu size={11} />}
+            {usedAi ? `AI-assisted${aiConfidence != null ? ` · ${confLabel} (${aiConfidence}/100)` : ""}` : "On-device estimate"}
+          </span>
+        </div>
+      )}
       <div className="score-num" style={{ color: bandColor(band) }}>
         {pct}%
       </div>
