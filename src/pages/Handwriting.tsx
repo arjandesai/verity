@@ -359,6 +359,8 @@ export default function Handwriting() {
                   return u ? getUserProfile(u.username).age : undefined;
                 })()}
                 previousProbability={prevProbability}
+                usedAi={!!geminiAnalysis}
+                aiConfidence={geminiAnalysis?.confidence ?? null}
               />
               {metrics && !geminiAnalysis && (
                 <BreakdownGrid

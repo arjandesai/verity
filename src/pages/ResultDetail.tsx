@@ -40,7 +40,12 @@ export default function ResultDetail() {
 
   const age = getUserProfile(user.username).age;
   const m = entry.metrics || {};
-  const isGemini = m.fluency !== undefined || m.pauseSeverity !== undefined || m.coherence !== undefined;
+  const isGemini =
+    m.fluency !== undefined ||
+    m.pauseSeverity !== undefined ||
+    m.coherence !== undefined ||
+    m.legibility !== undefined ||
+    m.strokeSteadiness !== undefined;
 
   return (
     <div className="container" style={{ paddingTop: 56, paddingBottom: 120, maxWidth: 640 }}>
@@ -56,7 +61,14 @@ export default function ResultDetail() {
 
       <RevealOnScroll delay={0.05}>
         <div className="runner-card" style={{ marginTop: 24 }}>
-          <ScoreBlock probability={entry.probability} band={entry.band} modality={`${entry.modality} test`} age={age} />
+          <ScoreBlock
+            probability={entry.probability}
+            band={entry.band}
+            modality={`${entry.modality} test`}
+            age={age}
+            usedAi={isGemini}
+            aiConfidence={m.confidence ?? null}
+          />
         </div>
       </RevealOnScroll>
 
@@ -70,6 +82,10 @@ export default function ResultDetail() {
                 {m.pauseSeverity !== undefined && <Metric label="Pause severity" value={`${m.pauseSeverity}/100`} />}
                 {m.wordFindingDifficulty !== undefined && <Metric label="Word-finding difficulty" value={`${m.wordFindingDifficulty}/100`} />}
                 {m.coherence !== undefined && <Metric label="Coherence" value={`${m.coherence}/100`} />}
+                {m.legibility !== undefined && <Metric label="Legibility" value={`${m.legibility}/100`} />}
+                {m.strokeSteadiness !== undefined && <Metric label="Stroke steadiness" value={`${m.strokeSteadiness}/100`} />}
+                {m.spacingConsistency !== undefined && <Metric label="Spacing consistency" value={`${m.spacingConsistency}/100`} />}
+                {m.letterSizeConsistency !== undefined && <Metric label="Letter size consistency" value={`${m.letterSizeConsistency}/100`} />}
                 {m.confidence != null && <Metric label="Confidence" value={`${m.confidence}/100`} />}
                 {m.transcription && <Metric label="Transcription" value={`"${m.transcription}"`} />}
                 {m.notes && <Metric label="AI notes" value={m.notes} />}
